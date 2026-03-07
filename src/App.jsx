@@ -1,117 +1,169 @@
 // src/App.jsx
 import { useState, useEffect } from "react";
-import Dashboard from "./components/Dashboard";
-import CustomerList from "./components/CustomerList";
-import AddCustomer from "./components/AddCustomer";
-import Reminders from "./components/Reminders";
-import Analytics from "./components/Analytics";
+import {
+  Zap, LayoutDashboard, Briefcase, Users, UserPlus,
+  HardHat, BarChart2, Bell, FileText, LogOut, RefreshCw, Menu, X, MapPin
+} from "lucide-react";
+import Login          from "./components/Login";
+import OwnerDashboard from "./components/owner/OwnerDashboard";
+import CustomerList   from "./components/CustomerList";
+import Reminders      from "./components/Reminders";
+import Analytics      from "./components/Analytics";
+import AddTechnician  from "./components/owner/AddTechnician";
+import JobAssign      from "./components/owner/JobAssign";
+import AllInvoices    from "./components/owner/AllInvoices";
+import LiveTracking   from "./components/owner/LiveTracking";
+import TechApp        from "./components/technician/TechApp";
 import { getAllCustomers, getExpiringWarranty } from "./services/api";
 import "./App.css";
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [customers, setCustomers] = useState([]);
-  const [expiring, setExpiring] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+const NAV_ITEMS = [
+  { id: "dashboard",   label: "Dashboard",   icon: LayoutDashboard },
+  { id: "jobs",        label: "Jobs",         icon: Briefcase       },
+  { id: "customers",   label: "Customers",    icon: Users           },
+  { id: "tracking",    label: "Live Track",   icon: MapPin          },
+  { id: "technicians", label: "Technicians",  icon: HardHat         },
+  { id: "invoices",    label: "Invoices",     icon: FileText        },
+  { id: "analytics",   label: "Analytics",    icon: BarChart2       },
+  { id: "reminders",   label: "Reminders",    icon: Bell            },
+];
 
-  const fetchAll = async () => {
+export default function App() {
+  const [user,        setUser]        = useState(null);
+  const [activeTab,   setActiveTab]   = useState("dashboard");
+  const [customers,   setCustomers]   = useState([]);
+  const [expiring,    setExpiring]    = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [refreshing,  setRefreshing]  = useState(false);
+  const [mobileOpen,  setMobileOpen]  = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const saved = localStorage.getItem("user");
+    if (token && saved) setUser(JSON.parse(saved));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (user?.role === "OWNER") fetchAll();
+  }, [user]);
+
+  const fetchAll = async (showRefresh = false) => {
+    if (showRefresh) setRefreshing(true);
+    else setLoading(true);
     try {
-      setLoading(true);
-      const [cData, eData] = await Promise.all([
-        getAllCustomers(),
-        getExpiringWarranty(),
-      ]);
+      const [cData, eData] = await Promise.all([getAllCustomers(), getExpiringWarranty()]);
       setCustomers(cData);
       setExpiring(eData);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); setRefreshing(false); }
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  const handleLogin  = (data) => setUser(data);
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null); setCustomers([]); setExpiring([]);
+  };
 
-  const nav = [
-    { id: "dashboard",  label: "Dashboard",    icon: "⚡" },
-    { id: "customers",  label: "Customers",     icon: "👥" },
-    { id: "add",        label: "Add Customer",  icon: "➕" },
-    { id: "analytics",  label: "Analytics",     icon: "📊" },
-    { id: "reminders",  label: "Reminders",     icon: "🔔" },
-  ];
+  const navigate = (tab) => { setActiveTab(tab); setMobileOpen(false); };
+
+  if (!user) return <Login onLogin={handleLogin} />;
+  if (user.role === "TECHNICIAN") return <TechApp user={user} onLogout={handleLogout} />;
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${sidebarOpen ? "open" : "collapsed"}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <span className="logo-icon">⚡</span>
-            {sidebarOpen && <span className="logo-text">ElectroServe</span>}
-          </div>
-          <button className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            {sidebarOpen ? "◀" : "▶"}
-          </button>
+
+      {/* ── TOP NAVBAR ── */}
+      <header className="topbar">
+        {/* Logo */}
+        <div className="topbar-logo">
+          <div className="topbar-logo-icon"><Zap size={20} strokeWidth={2.5} /></div>
+          <span className="topbar-logo-text">Electro<span>Serve</span></span>
         </div>
 
-        <nav className="sidebar-nav">
-          {nav.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${activeTab === item.id ? "active" : ""}`}
-              onClick={() => setActiveTab(item.id)}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {sidebarOpen && <span className="nav-label">{item.label}</span>}
-              {item.id === "reminders" && expiring.length > 0 && (
-                <span className="badge">{expiring.length}</span>
+        {/* Desktop Nav */}
+        <nav className="topbar-nav">
+          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+            <button key={id}
+              className={`topbar-nav-btn ${activeTab === id ? "active" : ""}`}
+              onClick={() => navigate(id)}>
+              <Icon size={16} strokeWidth={1.8} />
+              <span>{label}</span>
+              {id === "reminders" && expiring.length > 0 && (
+                <span className="nav-badge">{expiring.length}</span>
               )}
             </button>
           ))}
         </nav>
 
-        {sidebarOpen && (
-          <div className="sidebar-footer">
-            <div className="electrician-card">
-              <div className="elec-avatar">🔧</div>
-              <div>
-                <div className="elec-name">Electrician Pro</div>
-                <div className="elec-status">● Online</div>
-              </div>
+        {/* Right side */}
+        <div className="topbar-right">
+          {expiring.length > 0 && (
+            <button className="topbar-alert-btn" onClick={() => navigate("reminders")}>
+              <Bell size={14} /> {expiring.length} Alert
+            </button>
+          )}
+
+          <button className="topbar-refresh-btn" onClick={() => fetchAll(true)} disabled={refreshing}>
+            <RefreshCw size={14} className={refreshing ? "spin" : ""} />
+            <span>{refreshing ? "..." : "Refresh"}</span>
+          </button>
+
+          {/* User */}
+          <div className="topbar-user">
+            <div className="topbar-user-avatar">{user.name?.[0]?.toUpperCase()}</div>
+            <div>
+              <div className="topbar-user-name">{user.name}</div>
+              <div className="topbar-user-role">Owner</div>
             </div>
+            <button className="topbar-logout-btn" onClick={handleLogout} title="Logout">
+              <LogOut size={15} />
+            </button>
           </div>
-        )}
-      </aside>
 
+          {/* Mobile menu */}
+          <button className="topbar-menu-btn" onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile dropdown nav */}
+      {mobileOpen && (
+        <div className="mobile-nav-dropdown">
+          {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+            <button key={id}
+              className={`mobile-nav-item ${activeTab === id ? "active" : ""}`}
+              onClick={() => navigate(id)}>
+              <Icon size={18} strokeWidth={1.8} />
+              <span>{label}</span>
+              {id === "reminders" && expiring.length > 0 && (
+                <span className="nav-badge">{expiring.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── MAIN CONTENT ── */}
       <main className="main-content">
-        <header className="topbar">
-          <h1 className="page-title">
-            {nav.find(n => n.id === activeTab)?.icon}{" "}
-            {nav.find(n => n.id === activeTab)?.label}
-          </h1>
-          <div className="topbar-right">
-            {expiring.length > 0 && (
-              <button className="alert-chip" onClick={() => setActiveTab("reminders")}>
-                🔔 {expiring.length} Warranty Alert{expiring.length > 1 ? "s" : ""}
-              </button>
-            )}
-            <button className="refresh-btn" onClick={fetchAll}>🔄 Refresh</button>
-          </div>
-        </header>
-
         <div className="content-area">
           {loading ? (
             <div className="loader-wrap">
-              <div className="pulse-loader">⚡</div>
-              <p>Loading data...</p>
+              <div className="pulse-loader"><Zap size={28} /></div>
+              <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>Loading...</p>
             </div>
           ) : (
             <>
-              {activeTab === "dashboard"  && <Dashboard  customers={customers} expiring={expiring} onNavigate={setActiveTab} />}
-              {activeTab === "customers"  && <CustomerList customers={customers} onRefresh={fetchAll} />}
-              {activeTab === "add"        && <AddCustomer onSuccess={() => { fetchAll(); setActiveTab("customers"); }} />}
-              {activeTab === "analytics"  && <Analytics customers={customers} />}
-              {activeTab === "reminders"  && <Reminders  expiring={expiring} customers={customers} onRefresh={fetchAll} />}
+              {activeTab === "dashboard"   && <OwnerDashboard customers={customers} expiring={expiring} onNavigate={navigate} />}
+              {activeTab === "jobs"        && <JobAssign />}
+              {activeTab === "customers"   && <CustomerList  customers={customers} onRefresh={fetchAll} />}
+              {activeTab === "tracking"    && <LiveTracking />}
+              {activeTab === "technicians" && <AddTechnician />}
+              {activeTab === "invoices"    && <AllInvoices />}
+              {activeTab === "analytics"   && <Analytics     customers={customers} />}
+              {activeTab === "reminders"   && <Reminders     expiring={expiring} customers={customers} onRefresh={fetchAll} />}
             </>
           )}
         </div>

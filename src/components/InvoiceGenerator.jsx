@@ -11,6 +11,7 @@ export default function InvoiceModal({ customer, onClose }) {
   const [taxPercent, setTaxPercent]       = useState("");
   const [notes, setNotes]                 = useState(customer.serviceDetails || "");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [isPaid, setIsPaid]               = useState(false);
   const [loading, setLoading]             = useState(false);
   const [rcLoading, setRcLoading]         = useState(true);
   const [showDropdown, setShowDropdown]   = useState(false);
@@ -19,7 +20,6 @@ export default function InvoiceModal({ customer, onClose }) {
   const [cusPrice, setCusPrice] = useState("");
   const [cusQty,   setCusQty]   = useState(1);
   const [cusDesc,  setCusDesc]  = useState("");
-  const [isPaid, setIsPaid] = useState(false);
 
   const searchRef = useRef(null);
 
@@ -85,15 +85,15 @@ export default function InvoiceModal({ customer, onClose }) {
     setLoading(true);
     try {
       const invoice = await createInvoice({
-        customerId:  customer.id,
+        customerId:    customer.id,
         items: items.map(i => ({
           serviceName: i.serviceName,
           description: i.description,
           quantity:    i.qty,
           unitPrice:   i.price,
         })),
-        discountAmt:  disc,
-        taxPercent:   taxPct,
+        discountAmt:   disc,
+        taxPercent:    taxPct,
         notes,
         paymentMethod,
         paymentStatus: isPaid ? "PAID" : "UNPAID",
@@ -361,17 +361,16 @@ export default function InvoiceModal({ customer, onClose }) {
                 <span>₹{total.toFixed(2)}</span>
               </div>
               <div className="inv-sum-payment">💳 {paymentMethod}</div>
-              <div className="inv-field-group" style={{marginTop:"10px"}}>
-                <label style={{display:"flex",alignItems:"center",gap:"8px",cursor:"pointer"}}>
-                  <input
-                    type="checkbox"
-                    checked={isPaid}
-                    onChange={e => setIsPaid(e.target.checked)}
-                    style={{width:"16px",height:"16px"}}
-                  />
-                  <span style={{fontSize:"13px",color:"var(--text-primary)"}}>✅ Payment mil gayi?</span>
-                </label>
-              </div>
+
+              {/* Payment received toggle */}
+              <label className="inv-paid-toggle">
+                <input
+                  type="checkbox"
+                  checked={isPaid}
+                  onChange={e => setIsPaid(e.target.checked)}
+                />
+                <span>✅ Payment mil gayi (PAID)</span>
+              </label>
             </div>
           </div>
 
