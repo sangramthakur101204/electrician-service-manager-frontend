@@ -61,7 +61,6 @@ export default function JobAssign() {
   const [selectedCus, setSelectedCus] = useState(null);
   const [showCusDrop, setShowCusDrop] = useState(false);
   const [isNewCus,    setIsNewCus]    = useState(false);
-  const cusInputRef = useRef(null);  // for fixed dropdown positioning
 
   const [form, setForm] = useState({
     customerName:"", customerMobile:"", customerAddress:"",
@@ -272,26 +271,27 @@ export default function JobAssign() {
       {/* ── CREATE JOB FORM ── */}
       {showForm && (
         <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:16, backdropFilter:"blur(4px)" }}>
-          <div style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:640, maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 64px rgba(0,0,0,0.18)" }}>
+          <div style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:640, maxHeight:"90vh", overflow:"visible", boxShadow:"0 24px 64px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column" }}>
 
-            {/* Modal header */}
-            <div style={{ padding:"20px 24px", borderBottom:"1px solid #e2e8f0", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:"#fff", zIndex:1 }}>
+            {/* Modal header — fixed at top */}
+            <div style={{ padding:"20px 24px", borderBottom:"1px solid #e2e8f0", display:"flex", justifyContent:"space-between", alignItems:"center", background:"#fff", borderRadius:"20px 20px 0 0", flexShrink:0 }}>
               <div style={{ fontSize:18, fontWeight:800 }}>🔧 Naya Job Banao</div>
               <button onClick={() => { setShowForm(false); resetForm(); }}
                 style={{ width:32, height:32, borderRadius:8, background:"rgba(239,68,68,0.1)", border:"none", color:"#ef4444", cursor:"pointer", fontSize:18, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
             </div>
 
-            <div style={{ padding:24, display:"flex", flexDirection:"column", gap:20 }}>
-
-              {/* ── CUSTOMER SECTION — Smart Search ── */}
+            {/* ── CUSTOMER SECTION — outside scroll div so dropdown is NEVER clipped ── */}
+            <div style={{ padding:"0 24px 0", zIndex:10, position:"relative", background:"#fff" }}>
               <Section title="👤 Customer">
                 {!selectedCus && (
-                  <div style={{ position:"relative", marginBottom: isNewCus ? 14 : 0 }}>
-                    <div style={{ position:"relative" }} ref={cusInputRef}>
+                  <div>
+                    {/* Search input */}
+                    <div style={{ position:"relative" }}>
                       <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:14, color:"#94a3b8", pointerEvents:"none" }}>🔍</span>
                       <input
                         placeholder="Naam ya mobile type karo..."
                         value={cusSearch}
+                        autoComplete="off"
                         onChange={e => {
                           const v = e.target.value;
                           setCusSearch(v);
@@ -299,11 +299,7 @@ export default function JobAssign() {
                           if (/^\d/.test(v)) set("customerMobile", v.replace(/\D/g,""));
                           else set("customerName", v);
                         }}
-                        onFocus={() => {
-                          setShowCusDrop(true);
-                          // Scroll input into view so getBoundingClientRect gives correct coords
-                          setTimeout(() => cusInputRef.current?.scrollIntoView({ behavior:"smooth", block:"nearest" }), 50);
-                        }}
+                        onFocus={() => setShowCusDrop(true)}
                         style={{ ...inp, paddingLeft:36, width:"100%", boxSizing:"border-box" }}
                       />
                       {cusSearch && (
@@ -311,47 +307,42 @@ export default function JobAssign() {
                           style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#94a3b8", cursor:"pointer", fontSize:16 }}>✕</button>
                       )}
                     </div>
-                    {showCusDrop && cusSearch.length >= 1 && (() => {
-                      const rect = cusInputRef.current?.getBoundingClientRect();
-                      if (!rect) return null;
-                      return (
-                        <div style={{
-                          position:"fixed",
-                          top: rect.bottom + 4,
-                          left: rect.left,
-                          width: rect.width,
-                          background:"#fff", border:"1.5px solid #3b82f6",
-                          borderRadius:12, boxShadow:"0 16px 40px rgba(59,130,246,0.25)",
-                          zIndex:99999, maxHeight:220, overflowY:"auto"
-                        }}>
-                          {filteredCustomers.length > 0 && (
-                            <>
-                              <div style={{ padding:"8px 14px", fontSize:11, color:"#94a3b8", fontWeight:700, textTransform:"uppercase", borderBottom:"1px solid #f1f5f9", background:"#f8fafc" }}>
-                                📋 Existing Customers
+
+                    {/* INLINE dropdown — directly under input, never clipped */}
+                    {showCusDrop && cusSearch.length >= 1 && (
+                      <div style={{
+                        marginTop:4, background:"#fff",
+                        border:"1.5px solid #3b82f6", borderRadius:12,
+                        boxShadow:"0 8px 24px rgba(59,130,246,0.15)",
+                        overflow:"hidden"
+                      }}>
+                        {filteredCustomers.length > 0 && (
+                          <>
+                            <div style={{ padding:"7px 14px", fontSize:11, color:"#94a3b8", fontWeight:700, textTransform:"uppercase", background:"#f8fafc", borderBottom:"1px solid #f1f5f9" }}>
+                              📋 Existing Customers
+                            </div>
+                            {filteredCustomers.map(c => (
+                              <div key={c.id}
+                                onClick={() => { setSelectedCus(c); setShowCusDrop(false); setCusSearch(""); setIsNewCus(false); }}
+                                style={{ padding:"11px 16px", cursor:"pointer", borderBottom:"1px solid #f1f5f9", background:"#fff" }}
+                                onMouseEnter={e=>e.currentTarget.style.background="#eff6ff"}
+                                onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+                                <div style={{ fontWeight:700, fontSize:14 }}>{c.name}</div>
+                                <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>📞 {c.mobile}{c.machineType ? " · "+c.machineType : ""}{c.machineBrand ? " "+c.machineBrand : ""}</div>
                               </div>
-                              {filteredCustomers.map(c => (
-                                <div key={c.id}
-                                  onClick={() => { setSelectedCus(c); setShowCusDrop(false); setCusSearch(""); setIsNewCus(false); }}
-                                  style={{ padding:"11px 16px", cursor:"pointer", borderBottom:"1px solid #f1f5f9", background:"#fff" }}
-                                  onMouseEnter={e=>e.currentTarget.style.background="#eff6ff"}
-                                  onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
-                                  <div style={{ fontWeight:700, fontSize:14 }}>{c.name}</div>
-                                  <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>📞 {c.mobile}{c.machineType ? " · "+c.machineType : ""}{c.machineBrand ? " "+c.machineBrand : ""}</div>
-                                </div>
-                              ))}
-                            </>
-                          )}
-                          <div
-                            onClick={() => { setIsNewCus(true); setShowCusDrop(false); if (!/^\d/.test(cusSearch)) set("customerName", cusSearch); else set("customerMobile", cusSearch); }}
-                            style={{ padding:"12px 16px", cursor:"pointer", background:"rgba(59,130,246,0.04)", borderTop: filteredCustomers.length>0 ? "1.5px dashed #bfdbfe" : "none", color:"#3b82f6", fontWeight:700, fontSize:13 }}
-                            onMouseEnter={e=>e.currentTarget.style.background="rgba(59,130,246,0.1)"}
-                            onMouseLeave={e=>e.currentTarget.style.background="rgba(59,130,246,0.04)"}>
-                            ➕ Naya Customer Banao
-                            {filteredCustomers.length === 0 && <span style={{ color:"#64748b", fontWeight:400, marginLeft:6 }}>— koi match nahi mila</span>}
-                          </div>
+                            ))}
+                          </>
+                        )}
+                        <div
+                          onClick={() => { setIsNewCus(true); setShowCusDrop(false); if (!/^\d/.test(cusSearch)) set("customerName", cusSearch); else set("customerMobile", cusSearch); }}
+                          style={{ padding:"12px 16px", cursor:"pointer", background:"rgba(59,130,246,0.04)", borderTop: filteredCustomers.length>0 ? "1.5px dashed #bfdbfe" : "none", color:"#3b82f6", fontWeight:700, fontSize:13 }}
+                          onMouseEnter={e=>e.currentTarget.style.background="rgba(59,130,246,0.1)"}
+                          onMouseLeave={e=>e.currentTarget.style.background="rgba(59,130,246,0.04)"}>
+                          ➕ Naya Customer Banao
+                          {filteredCustomers.length === 0 && <span style={{ color:"#64748b", fontWeight:400, marginLeft:6 }}>— koi match nahi mila</span>}
                         </div>
-                      );
-                    })()}
+                      </div>
+                    )}
                   </div>
                 )}
                 {selectedCus && (
@@ -365,46 +356,52 @@ export default function JobAssign() {
                       style={{ background:"none", border:"1px solid rgba(239,68,68,0.3)", color:"#ef4444", cursor:"pointer", fontSize:12, padding:"5px 10px", borderRadius:8, fontWeight:600 }}>Change</button>
                   </div>
                 )}
-                {isNewCus && !selectedCus && (
-                  <div style={{ background:"rgba(59,130,246,0.04)", border:"1.5px solid rgba(59,130,246,0.2)", borderRadius:12, padding:14, marginTop:8 }}>
-                    <div style={{ fontSize:12, color:"#3b82f6", fontWeight:700, marginBottom:12 }}>🆕 Naya Customer Details</div>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                      <Field label="Naam *">
-                        <input placeholder="Ramesh Kumar" value={form.customerName} onChange={e=>set("customerName",e.target.value)} style={inp} />
-                      </Field>
-                      <Field label="Mobile *">
-                        <input placeholder="9876543210" maxLength={10} value={form.customerMobile}
-                          onChange={e=>set("customerMobile",e.target.value.replace(/\D/g,""))} style={inp} />
-                      </Field>
-                      <div style={{ gridColumn:"1/-1" }}>
-                        <Field label="📍 Address">
-                          <div onClick={() => setShowMap(true)}
-                            style={{ padding:"12px 14px", borderRadius:10, border:"2px dashed #cbd5e1", background:"#f8fafc", cursor:"pointer" }}
-                            onMouseEnter={e=>e.currentTarget.style.borderColor="#3b82f6"}
-                            onMouseLeave={e=>e.currentTarget.style.borderColor="#cbd5e1"}>
-                            {form.customerAddress ? (
-                              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                                <span>📍</span>
-                                <div style={{ flex:1, fontWeight:600, fontSize:14 }}>{form.customerAddress}</div>
-                                <span style={{ color:"#3b82f6", fontSize:12 }}>Change ›</span>
+              </Section>
+            </div>
+
+            {/* Scrollable form body — machine, problem, technician, submit */}
+            <div style={{ padding:"0 24px 24px", display:"flex", flexDirection:"column", gap:20, overflowY:"auto", flex:1 }}>
+
+              {/* ── NEW CUSTOMER FIELDS (inside scroll since no dropdown needed) ── */}
+              {isNewCus && !selectedCus && (
+                <div style={{ background:"rgba(59,130,246,0.04)", border:"1.5px solid rgba(59,130,246,0.2)", borderRadius:12, padding:14 }}>
+                  <div style={{ fontSize:12, color:"#3b82f6", fontWeight:700, marginBottom:12 }}>🆕 Naya Customer Details</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                    <Field label="Naam *">
+                      <input placeholder="Ramesh Kumar" value={form.customerName} onChange={e=>set("customerName",e.target.value)} style={inp} />
+                    </Field>
+                    <Field label="Mobile *">
+                      <input placeholder="9876543210" maxLength={10} value={form.customerMobile}
+                        onChange={e=>set("customerMobile",e.target.value.replace(/\D/g,""))} style={inp} />
+                    </Field>
+                    <div style={{ gridColumn:"1/-1" }}>
+                      <Field label="📍 Address">
+                        <div onClick={() => setShowMap(true)}
+                          style={{ padding:"12px 14px", borderRadius:10, border:"2px dashed #cbd5e1", background:"#f8fafc", cursor:"pointer" }}
+                          onMouseEnter={e=>e.currentTarget.style.borderColor="#3b82f6"}
+                          onMouseLeave={e=>e.currentTarget.style.borderColor="#cbd5e1"}>
+                          {form.customerAddress ? (
+                            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                              <span>📍</span>
+                              <div style={{ flex:1, fontWeight:600, fontSize:14 }}>{form.customerAddress}</div>
+                              <span style={{ color:"#3b82f6", fontSize:12 }}>Change ›</span>
+                            </div>
+                          ) : (
+                            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                              <span style={{ fontSize:22 }}>🗺️</span>
+                              <div>
+                                <div style={{ fontWeight:700, fontSize:13 }}>Map pe Pin Drop Karo</div>
+                                <div style={{ fontSize:12, color:"#94a3b8" }}>Address auto-fill hoga</div>
                               </div>
-                            ) : (
-                              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                                <span style={{ fontSize:22 }}>🗺️</span>
-                                <div>
-                                  <div style={{ fontWeight:700, fontSize:13 }}>Map pe Pin Drop Karo</div>
-                                  <div style={{ fontSize:12, color:"#94a3b8" }}>Address auto-fill hoga</div>
-                                </div>
-                                <span style={{ marginLeft:"auto", fontSize:18, color:"#94a3b8" }}>›</span>
-                              </div>
-                            )}
-                          </div>
-                        </Field>
-                      </div>
+                              <span style={{ marginLeft:"auto", fontSize:18, color:"#94a3b8" }}>›</span>
+                            </div>
+                          )}
+                        </div>
+                      </Field>
                     </div>
                   </div>
-                )}
-              </Section>
+                </div>
+              )}
 
               {/* ── MACHINE ── */}
               <Section title="🔧 Machine Details">
