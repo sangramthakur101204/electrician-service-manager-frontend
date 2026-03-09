@@ -1,6 +1,6 @@
 // src/components/Reminders.jsx
 import { useState, useEffect } from "react";
-import { authHeader } from "../services/api";
+import { authHeader , apiFetch } from "../services/api";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -16,7 +16,7 @@ export default function Reminders({ expiring, customers, onRefresh }) {
   const fetchAutoReminders = async () => {
     setLoadingAuto(true);
     try {
-      const res  = await fetch(`${API}/reminders/warranty`, { headers: authHeader() });
+      const res  = await apiFetch(`${API}/reminders/warranty`, { headers: authHeader() });
       const data = await res.json();
       setAutoReminders(Array.isArray(data) ? data : []);
     } catch (e) { console.error(e); }

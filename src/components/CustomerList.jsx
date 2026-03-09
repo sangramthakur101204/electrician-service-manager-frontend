@@ -3,22 +3,26 @@ import { useState } from "react";
 import {
   markServiceDone, deleteCustomer,
   getWhatsAppLink, getWhatsAppReminderLink, getWhatsAppWarrantyLink,
-  updateCustomer
+  updateCustomer, authHeader, apiFetch, downloadInvoicePdf
 } from "../services/api";
 import { generateWarrantyCard } from "./WarrantyCard";
 import InvoiceModal from "./InvoiceGenerator";
+import { useToast } from "./Toast.jsx";
+
+const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 const MACHINE_TYPES = ["AC", "Washing Machine", "Water Purifier", "Refrigerator", "Microwave", "Geyser", "Fan", "Motor Pump", "Inverter", "Other"];
 const BRANDS = ["LG", "Samsung", "Whirlpool", "Voltas", "Daikin", "Godrej", "Haier", "Panasonic", "Blue Star", "Carrier", "Other"];
-const WARRANTY_PERIODS = ["3 months", "6 months", "1 year", "2 years", "3 years"];
+const WARRANTY_PERIODS = ["No Warranty", "3 months", "6 months", "1 year", "2 years", "3 years"];
 const EMPTY_EDIT = {
   name: "", mobile: "", address: "", latitude: "", longitude: "",
   machineType: "", machineBrand: "", model: "", serialNumber: "",
-  serviceDate: "", warrantyPeriod: "1 year", serviceDetails: "",
+  serviceDate: "", warrantyPeriod: "No Warranty", serviceDetails: "",
   serviceStatus: "PENDING", notes: "",
 };
 
 export default function CustomerList({ customers, onRefresh }) {
+  const toast = useToast();
   const [search,        setSearch]       = useState("");
   const [filterStatus,  setFilterStatus] = useState("ALL");
   const [filterMachine, setFilterMachine]= useState("");
@@ -28,8 +32,105 @@ export default function CustomerList({ customers, onRefresh }) {
   const [loadingId,     setLoadingId]    = useState(null);
   const [sortField,     setSortField]    = useState("id");
   const [sortDir,       setSortDir]      = useState("desc");
-  const [detailId,      setDetailId]     = useState(null); // service details popup
-  const [invoiceCustomer, setInvoiceCustomer] = useState(null); // invoice modal
+  const [detailId,      setDetailId]     = useState(null);
+  const [invoiceCustomer, setInvoiceCustomer] = useState(null); // NEW invoice (InvoiceGenerator)
+  const [custInvModal,  setCustInvModal] = useState(null);      // VIEW invoices modal
+  const [custInvList,   setCustInvList]  = useState([]);
+  const [custInvLoad,   setCustInvLoad]  = useState(false);
+  const [exporting,     setExporting]    = useState(false);
+
+  // ── Export CSV/Excel ──────────────────────────────────────────
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      // Fetch job history for all customers
+      const jobsRes  = await apiFetch(`${API}/jobs`, { headers: authHeader() });
+      const allJobs  = jobsRes.ok ? await jobsRes.json() : [];
+      const invRes   = await apiFetch(`${API}/invoices`, { headers: authHeader() });
+      const allInvs  = invRes.ok ? await invRes.json() : [];
+
+      const rows = [
+        ["ID","Naam","Mobile","Address","Machine Type","Brand","Model","Serial No",
+         "Service Date","Warranty Period","Warranty End","Service Details","Status",
+         "Total Jobs","Total Invoices","Total Paid (₹)","Pending (₹)"]
+      ];
+      customers.forEach(c => {
+        const cJobs = allJobs.filter(j => j.customer?.id === c.id);
+        const cInvs = allInvs.filter(i => i.customer?.id === c.id);
+        const paid  = cInvs.filter(i=>i.paymentStatus==="PAID").reduce((s,i)=>s+(i.totalAmount||0),0);
+        const pend  = cInvs.filter(i=>i.paymentStatus==="UNPAID").reduce((s,i)=>s+(i.totalAmount||0),0);
+        rows.push([
+          c.id, c.name||"", c.mobile||"", (c.address||"").replace(/,/g," "),
+          c.machineType||"", c.machineBrand||"", c.model||"", c.serialNumber||"",
+          c.serviceDate||"", c.warrantyPeriod||"", c.warrantyEnd||"",
+          (c.serviceDetails||"").replace(/,/g," "), c.serviceStatus||"",
+          cJobs.length, cInvs.length, Math.round(paid), Math.round(pend)
+        ]);
+      });
+
+      const csv = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+      const blob = new Blob(["\uFEFF"+csv], { type:"text/csv;charset=utf-8;" });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href = url; a.download = `ElectroServe_Customers_${new Date().toLocaleDateString("en-IN").replace(/\//g,"-")}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+    } catch(e) { toast("Export error: " + e.message, "error"); }
+    finally { setExporting(false); }
+  };
+
+  // ── Export PDF (print-friendly HTML) ─────────────────────────
+  const exportPDF = async () => {
+    setExporting(true);
+    try {
+      const jobsRes = await apiFetch(`${API}/jobs`,     { headers: authHeader() });
+      const invRes  = await apiFetch(`${API}/invoices`, { headers: authHeader() });
+      const allJobs = jobsRes.ok ? await jobsRes.json() : [];
+      const allInvs = invRes.ok  ? await invRes.json()  : [];
+
+      const rows = customers.map(c => {
+        const cJobs = allJobs.filter(j => j.customer?.id===c.id);
+        const cInvs = allInvs.filter(i => i.customer?.id===c.id);
+        const paid  = cInvs.filter(i=>i.paymentStatus==="PAID").reduce((s,i)=>s+(i.totalAmount||0),0);
+        const pend  = cInvs.filter(i=>i.paymentStatus==="UNPAID").reduce((s,i)=>s+(i.totalAmount||0),0);
+        return `<tr>
+          <td>${c.name||""}</td><td>${c.mobile||""}</td>
+          <td>${c.machineType||""} ${c.machineBrand||""}</td>
+          <td>${c.serviceDate||""}</td><td>${c.warrantyPeriod||""}</td>
+          <td>${c.warrantyEnd||""}</td>
+          <td><span style="color:${c.serviceStatus==="DONE"?"#059669":"#f59e0b"};font-weight:600">${c.serviceStatus||""}</span></td>
+          <td>${cJobs.length}</td>
+          <td style="color:#059669;font-weight:700">₹${Math.round(paid).toLocaleString("en-IN")}</td>
+          <td style="color:${pend>0?"#ef4444":"#64748b"};font-weight:700">₹${Math.round(pend).toLocaleString("en-IN")}</td>
+        </tr>`;
+      }).join("");
+
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <title>ElectroServe — Customer Report</title>
+        <style>
+          body{font-family:Arial,sans-serif;padding:24px;font-size:12px;color:#1e293b}
+          h1{font-size:20px;margin-bottom:4px}
+          p{color:#64748b;margin-bottom:16px;font-size:11px}
+          table{width:100%;border-collapse:collapse}
+          th{background:#1e293b;color:#fff;padding:8px 10px;text-align:left;font-size:11px;white-space:nowrap}
+          td{padding:7px 10px;border-bottom:1px solid #e2e8f0;font-size:11px}
+          tr:nth-child(even){background:#f8fafc}
+          @media print{body{padding:0}}
+        </style></head><body>
+        <h1>⚡ ElectroServe — Customer Report</h1>
+        <p>Generated: ${new Date().toLocaleString("en-IN")} · Total: ${customers.length} customers</p>
+        <table><thead><tr>
+          <th>Naam</th><th>Mobile</th><th>Machine</th><th>Service Date</th>
+          <th>Warranty</th><th>Warranty End</th><th>Status</th>
+          <th>Jobs</th><th>Paid</th><th>Pending</th>
+        </tr></thead><tbody>${rows}</tbody></table>
+        <script>window.onload=()=>{window.print();}<\/script>
+        </body></html>`;
+
+      const w = window.open("","_blank");
+      w.document.write(html); w.document.close();
+    } catch(e) { toast("PDF error: " + e.message, "error"); }
+    finally { setExporting(false); }
+  };
 
   const machineTypes = [...new Set(customers.map(c => c.machineType).filter(Boolean))];
 
@@ -65,27 +166,40 @@ export default function CustomerList({ customers, onRefresh }) {
     else { setSortField(f); setSortDir("asc"); }
   };
 
+  // Open customer invoices view modal
+  const openCustInvoices = async (c) => {
+    setCustInvModal(c);
+    setCustInvLoad(true);
+    setCustInvList([]);
+    try {
+      const res = await apiFetch(`${API}/invoices/customer/${c.id}`, { headers: authHeader() });
+      const data = res.ok ? await res.json() : [];
+      setCustInvList(Array.isArray(data) ? data.sort((a,b)=> new Date(b.invoiceDate||0)-new Date(a.invoiceDate||0)) : []);
+    } catch(e) { setCustInvList([]); }
+    finally { setCustInvLoad(false); }
+  };
+
   const openMap = c => {
     if (c.latitude && c.longitude) {
       window.open(`https://www.google.com/maps?q=${c.latitude},${c.longitude}`, "_blank");
     } else if (c.address) {
       window.open(`https://www.google.com/maps/search/${encodeURIComponent(c.address)}`, "_blank");
     } else {
-      alert("Koi location data nahi hai.");
+      toast("Koi location data nahi hai.", "warning");
     }
   };
 
   const handleMarkDone = async id => {
     setLoadingId(id);
     try { await markServiceDone(id); await onRefresh(); }
-    catch (e) { alert(e.message); }
+    catch (e) { toast(e.message, "error"); }
     finally { setLoadingId(null); }
   };
 
   const handleDelete = async id => {
     setLoadingId(id);
     try { await deleteCustomer(id); await onRefresh(); setConfirmDelete(null); }
-    catch (e) { alert(e.message); }
+    catch (e) { toast(e.message, "error"); }
     finally { setLoadingId(null); }
   };
 
@@ -96,7 +210,7 @@ export default function CustomerList({ customers, onRefresh }) {
       if (type === "reminder")  link = await getWhatsAppReminderLink(id);
       if (type === "warranty")  link = await getWhatsAppWarrantyLink(id);
       window.open(link, "_blank");
-    } catch (e) { alert(e.message); }
+    } catch (e) { toast(e.message, "error"); }
   };
 
   const openEdit = c => {
@@ -104,14 +218,14 @@ export default function CustomerList({ customers, onRefresh }) {
     setEditForm({
       ...c,
       serviceDate:  c.serviceDate  || "",
-      warrantyPeriod: c.warrantyPeriod || "1 year",
+      warrantyPeriod: c.warrantyPeriod || "No Warranty",
     });
   };
 
   const handleEditSave = async () => {
     setLoadingId(editId);
     try { await updateCustomer(editId, editForm); await onRefresh(); setEditId(null); }
-    catch (e) { alert(e.message); }
+    catch (e) { toast(e.message, "error"); }
     finally { setLoadingId(null); }
   };
 
@@ -134,10 +248,10 @@ export default function CustomerList({ customers, onRefresh }) {
           {search && <button className="clear-btn" onClick={() => setSearch("")}>✕</button>}
         </div>
         <div className="filter-chips">
-          {["ALL","PENDING","DONE"].map(s => (
+          {["ALL","PENDING","DONE","CANCELLED"].map(s => (
             <button key={s} className={`chip ${filterStatus===s?"chip-active":""}`}
               onClick={() => setFilterStatus(s)}>
-              {s==="ALL" ? "Sab" : s==="PENDING" ? "⏳ Pending" : "✅ Done"}
+              {s==="ALL" ? "Sab" : s==="PENDING" ? "⏳ Pending" : s==="DONE" ? "✅ Done" : "❌ Cancelled"}
             </button>
           ))}
         </div>
@@ -147,6 +261,16 @@ export default function CustomerList({ customers, onRefresh }) {
           {machineTypes.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
         <span className="results-count">{filtered.length} customers</span>
+        <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
+          <button onClick={exportExcel} disabled={exporting}
+            style={{padding:"7px 14px",borderRadius:10,border:"1.5px solid #10b981",background:exporting?"#f8fafc":"rgba(16,185,129,0.06)",color:"#059669",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}>
+            📊 {exporting?"Exporting...":"Excel Export"}
+          </button>
+          <button onClick={exportPDF} disabled={exporting}
+            style={{padding:"7px 14px",borderRadius:10,border:"1.5px solid #6366f1",background:exporting?"#f8fafc":"rgba(99,102,241,0.06)",color:"#6366f1",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}>
+            📄 {exporting?"Exporting...":"PDF Report"}
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -222,24 +346,45 @@ export default function CustomerList({ customers, onRefresh }) {
 
                   <td>
                     <span className={`status-badge status-${c.serviceStatus?.toLowerCase()}`}>
-                      {c.serviceStatus === "DONE" ? "✅ Done" : "⏳ Pending"}
+                      {c.serviceStatus === "DONE"      ? "✅ Done"
+                       : c.serviceStatus === "CANCELLED" ? "❌ Cancelled"
+                       : "⏳ Pending"}
                     </span>
                   </td>
 
                   <td>
                     <div className="action-btns">
-                      {c.serviceStatus !== "DONE" && (
+                      {/* ✔ Mark Done — sirf PENDING pe */}
+                      {c.serviceStatus === "PENDING" && (
                         <button className="act-btn act-green" onClick={() => handleMarkDone(c.id)}
                           disabled={loadingId===c.id} title="Mark Done">✔</button>
                       )}
-                      <button className="act-btn act-blue"    onClick={() => openEdit(c)}           title="Edit">✏️</button>
-                      <button className="act-btn act-map"     onClick={() => openMap(c)}             title="Map Kholo">🗺️</button>
-                      <button className="act-btn act-whatsapp" onClick={() => handleWA(c.id,"thankyou")} title="Thank You">💬</button>
-                      <button className="act-btn act-orange"  onClick={() => handleWA(c.id,"reminder")} title="Reminder">🔔</button>
-                      <button className="act-btn act-warranty" onClick={() => handleWA(c.id,"warranty")} title="Warranty Card WhatsApp">🛡️</button>
-                      <button className="act-btn act-pdf"     onClick={() => generateWarrantyCard(c)} title="Warranty PDF Download">📋</button>
-                      <button className="act-btn act-invoice" onClick={() => setInvoiceCustomer(c)} title="Invoice Banao">📄</button>
-                      <button className="act-btn act-red"     onClick={() => setConfirmDelete(c.id)} title="Delete">🗑️</button>
+
+                      {/* Edit — hamesha */}
+                      <button className="act-btn act-blue" onClick={() => openEdit(c)} title="Edit">✏️</button>
+
+                      {/* Map — hamesha */}
+                      <button className="act-btn act-map" onClick={() => openMap(c)} title="Map Kholo">🗺️</button>
+
+                      {/* CANCELLED pe sirf Edit+Map+Delete dikhao — baaki sab hide */}
+                      {c.serviceStatus !== "CANCELLED" && (<>
+                        <button className="act-btn act-whatsapp" onClick={() => handleWA(c.id,"thankyou")} title="Thank You">💬</button>
+                        <button className="act-btn act-orange"   onClick={() => handleWA(c.id,"reminder")} title="Reminder">🔔</button>
+
+                        {/* Warranty buttons — sirf tab jab warranty ho */}
+                        {c.warrantyPeriod && c.warrantyPeriod !== "No Warranty" && (<>
+                          <button className="act-btn act-warranty" onClick={() => handleWA(c.id,"warranty")} title="Warranty Card WhatsApp">🛡️</button>
+                          <button className="act-btn act-pdf"     onClick={() => generateWarrantyCard(c)} title="Warranty PDF Download">📋</button>
+                        </>)}
+
+                        {/* Invoice — sirf DONE pe */}
+                        {c.serviceStatus === "DONE" && (
+                          <button className="act-btn act-invoice" onClick={() => openCustInvoices(c)} title="Customer Invoices Dekho">📄</button>
+                        )}
+                      </>)}
+
+                      {/* Delete — hamesha */}
+                      <button className="act-btn act-red" onClick={() => setConfirmDelete(c.id)} title="Delete">🗑️</button>
                     </div>
                   </td>
 
@@ -329,6 +474,7 @@ export default function CustomerList({ customers, onRefresh }) {
                   onChange={e => setEditForm({...editForm,serviceStatus:e.target.value})}>
                   <option value="PENDING">⏳ Pending</option>
                   <option value="DONE">✅ Done</option>
+                  <option value="CANCELLED">❌ Cancelled</option>
                 </select>
               </div>
             </div>
@@ -357,12 +503,98 @@ export default function CustomerList({ customers, onRefresh }) {
         </div>
       )}
 
-      {/* Invoice Modal */}
+      {/* Invoice Modal — create new (kept for compatibility) */}
       {invoiceCustomer && (
         <InvoiceModal
           customer={invoiceCustomer}
           onClose={() => setInvoiceCustomer(null)}
         />
+      )}
+
+      {/* Customer Invoices View Modal — PDF download */}
+      {custInvModal && (
+        <div style={{ position:"fixed", inset:0, zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:"20px" }}
+             onClick={() => setCustInvModal(null)}>
+          <div style={{ position:"absolute", inset:0, background:"rgba(15,23,42,0.6)", backdropFilter:"blur(5px)" }}/>
+          <div style={{
+              position:"relative", background:"#fff", borderRadius:20,
+              width:520, maxWidth:"calc(100vw - 32px)",
+              maxHeight:"80vh", display:"flex", flexDirection:"column",
+              boxShadow:"0 24px 64px rgba(0,0,0,0.3)",
+              overflow:"hidden",
+            }}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{ padding:"18px 20px 14px", borderBottom:"1px solid #f1f5f9", flexShrink:0 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
+                <div>
+                  <div style={{ fontWeight:800, fontSize:16, color:"#1e293b" }}>📄 {custInvModal.name} ke Invoices</div>
+                  <div style={{ fontSize:12, color:"#64748b", marginTop:3 }}>PDF download ya details dekho</div>
+                </div>
+                <button onClick={() => setCustInvModal(null)} style={{
+                  width:30, height:30, borderRadius:"50%", border:"1.5px solid #e2e8f0",
+                  background:"#f8fafc", cursor:"pointer", fontSize:14, flexShrink:0,
+                  display:"flex", alignItems:"center", justifyContent:"center", color:"#64748b",
+                }}>✕</button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div style={{ flex:1, overflowY:"auto", padding:"14px 20px" }}>
+              {custInvLoad ? (
+                <div style={{ textAlign:"center", padding:40, color:"#64748b" }}>⚡ Load ho raha hai...</div>
+              ) : custInvList.length === 0 ? (
+                <div style={{ textAlign:"center", padding:40 }}>
+                  <div style={{ fontSize:40, marginBottom:8 }}>📭</div>
+                  <div style={{ color:"#64748b", fontWeight:600 }}>Koi invoice nahi mila</div>
+                  <div style={{ fontSize:12, color:"#94a3b8", marginTop:4 }}>Job complete karne ke baad invoice banega</div>
+                </div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  {custInvList.map(inv => (
+                    <div key={inv.id} style={{
+                      background:"#f8fafc", borderRadius:12, padding:"12px 14px",
+                      border:"1.5px solid #e2e8f0", display:"flex", alignItems:"center", gap:12,
+                    }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontWeight:700, fontSize:13, color:"#1e293b" }}>{inv.invoiceNumber}</div>
+                        <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>
+                          📅 {inv.invoiceDate} &nbsp;·&nbsp; 👷 {inv.technicianName||"—"}
+                        </div>
+                        <div style={{ display:"flex", gap:8, marginTop:4, alignItems:"center" }}>
+                          <span style={{ fontWeight:800, fontSize:14, color:"#10b981" }}>₹{Number(inv.totalAmount||0).toLocaleString("en-IN")}</span>
+                          <span style={{
+                            fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:20,
+                            background: inv.paymentStatus==="PAID" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+                            color: inv.paymentStatus==="PAID" ? "#059669" : "#ef4444",
+                          }}>{inv.paymentStatus}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => downloadInvoicePdf(inv.id, custInvModal.name, inv.invoiceNumber)}
+                        style={{
+                          padding:"8px 14px", borderRadius:10, cursor:"pointer",
+                          background:"linear-gradient(135deg,#3b82f6,#2563eb)",
+                          color:"#fff", border:"none", fontWeight:700, fontSize:12,
+                          display:"flex", alignItems:"center", gap:6, flexShrink:0,
+                        }}>
+                        ⬇️ PDF
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding:"12px 20px", borderTop:"1px solid #f1f5f9", flexShrink:0, background:"#fafafa" }}>
+              <div style={{ fontSize:12, color:"#64748b", textAlign:"center" }}>
+                {custInvList.length} invoice{custInvList.length!==1?"s":""} found
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

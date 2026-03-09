@@ -1,4 +1,5 @@
 // src/components/AddCustomer.jsx
+import { toast } from "./Toast.jsx";
 import { useState } from "react";
 import { addCustomer } from "../services/api";
 import LocationPicker from "./LocationPicker";
@@ -53,7 +54,7 @@ export default function AddCustomer({ onSuccess }) {
       await addCustomer(form);
       setSuccess(true); setForm(EMPTY);
       setTimeout(()=>{setSuccess(false); onSuccess&&onSuccess();},1800);
-    } catch(err){ alert("Error: "+err.message); }
+    } catch(err){ toast("Error: " + err.message, "error"); }
     finally { setLoading(false); }
   };
 

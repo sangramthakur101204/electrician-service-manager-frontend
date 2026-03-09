@@ -63,8 +63,8 @@ export default function InvoiceModal({ customer, onClose }) {
   const addCustom = () => {
     const name  = cusName.trim();
     const price = parseFloat(cusPrice);
-    if (!name) { alert("Service naam likhna zaroori hai!"); return; }
-    if (isNaN(price) || price < 0) { alert("Valid price daalo!"); return; }
+    if (!name) { toast("Service naam likhna zaroori hai!", "error"); return; }
+    if (isNaN(price) || price < 0) { toast("Valid price daalo!", "error"); return; }
     setItems(prev => [...prev, {
       id: Date.now() + Math.random(),
       serviceName: name,
@@ -81,7 +81,7 @@ export default function InvoiceModal({ customer, onClose }) {
   const updateName  = (id, v) => setItems(prev => prev.map(i => i.id === id ? {...i, serviceName: v} : i));
 
   const handleSubmit = async () => {
-    if (items.length === 0) { alert("Koi bhi ek item add karo pehle!"); return; }
+    if (items.length === 0) { toast("Koi bhi ek item add karo pehle!", "error"); return; }
     setLoading(true);
     try {
       const invoice = await createInvoice({
@@ -101,7 +101,7 @@ export default function InvoiceModal({ customer, onClose }) {
       await downloadInvoicePdf(invoice.id, customer.name, invoice.invoiceNumber);
       onClose();
     } catch (e) {
-      alert("Error: " + e.message);
+      toast("Error: " + e.message, "error");
     } finally {
       setLoading(false);
     }

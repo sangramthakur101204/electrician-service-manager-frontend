@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import {
   Zap, LayoutDashboard, Briefcase, Users, UserPlus,
-  HardHat, BarChart2, Bell, FileText, LogOut, RefreshCw, Menu, X, MapPin
+  HardHat, BarChart2, Bell, FileText, LogOut, RefreshCw, Menu, X, MapPin, Settings as SettingsIcon
 } from "lucide-react";
 import Login          from "./components/Login";
 import OwnerDashboard from "./components/owner/OwnerDashboard";
@@ -14,6 +14,7 @@ import JobAssign      from "./components/owner/JobAssign";
 import AllInvoices    from "./components/owner/AllInvoices";
 import LiveTracking   from "./components/owner/LiveTracking";
 import TechApp        from "./components/technician/TechApp";
+import Settings       from "./components/owner/Settings";
 import { getAllCustomers, getExpiringWarranty } from "./services/api";
 import "./App.css";
 
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { id: "invoices",    label: "Invoices",     icon: FileText        },
   { id: "analytics",   label: "Analytics",    icon: BarChart2       },
   { id: "reminders",   label: "Reminders",    icon: Bell            },
+  { id: "settings",    label: "Settings",     icon: SettingsIcon    },
 ];
 
 export default function App() {
@@ -159,11 +161,12 @@ export default function App() {
               {activeTab === "dashboard"   && <OwnerDashboard customers={customers} expiring={expiring} onNavigate={navigate} />}
               {activeTab === "jobs"        && <JobAssign />}
               {activeTab === "customers"   && <CustomerList  customers={customers} onRefresh={fetchAll} />}
-              {activeTab === "tracking"    && <LiveTracking />}
+              {activeTab === "tracking"    && <LiveTracking onNavigate={navigate} />}
               {activeTab === "technicians" && <AddTechnician />}
               {activeTab === "invoices"    && <AllInvoices />}
               {activeTab === "analytics"   && <Analytics     customers={customers} />}
               {activeTab === "reminders"   && <Reminders     expiring={expiring} customers={customers} onRefresh={fetchAll} />}
+              {activeTab === "settings"    && <Settings />}
             </>
           )}
         </div>

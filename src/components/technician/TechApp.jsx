@@ -1,6 +1,7 @@
 // src/components/technician/TechApp.jsx
 import { useState, useEffect } from "react";
-import { authHeader, downloadInvoicePdf, sendLocation } from "../../services/api";
+import { authHeader, downloadInvoicePdf, sendLocation , apiFetch } from "../../services/api";
+import { useToast } from "../Toast.jsx";
 import { generateWarrantyCard } from "../WarrantyCard";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -34,6 +35,7 @@ const fmt = n => "₹" + Number(n||0).toLocaleString("en-IN");
 // ─────────────────────────────────────────────────────────────
 
 export default function TechApp({ user, onLogout }) {
+  const toast = useToast();
   const [screen,   setScreen]   = useState("home");
   const [jobs,     setJobs]     = useState([]);
   const [history,  setHistory]  = useState([]);
@@ -58,18 +60,134 @@ export default function TechApp({ user, onLogout }) {
   const [savingInv, setSavingInv] = useState(false);
   const [invoice,   setInvoice]   = useState(null);
 
-  // GPS 30s
+  const [gpsStatus, setGpsStatus] = useState("starting"); // "starting" | "ok" | "error"
+
+  // ── LIVE GPS TRACKING ────────────────────────────────────────────────────
+  // Dual mode:
+  //   Native APK  → BackgroundGeolocation plugin (truly background, foreground service)
+  //   Web browser → watchPosition + Wake Lock (best possible for browser)
   useEffect(() => {
-    const send = () => {
+    let webWatchId  = null;
+    let fallbackId  = null;
+    let wakeLock    = null;
+    let lastSent    = 0;
+    const THROTTLE  = 10000;
+
+    // Check if running as native APK (Capacitor)
+    const isNative = typeof window !== "undefined" &&
+                     window.Capacitor?.isNativePlatform?.() === true;
+
+    function doSend(lat, lng) {
+      const now = Date.now();
+      if (now - lastSent < THROTTLE) return;
+      lastSent = now;
+      sendLocation(lat, lng)
+        .then(() => setGpsStatus("ok"))
+        .catch(() => setGpsStatus("error"));
+    }
+
+    // ── NATIVE APK MODE ─────────────────────────────────────────────────
+    async function startNativeGPS() {
+      try {
+        const BGL = window.BackgroundGeolocation;
+        if (!BGL) { startWebGPS(); return; } // plugin not available, fallback
+
+        await BGL.ready({
+          desiredAccuracy: BGL.DESIRED_ACCURACY_HIGH,
+          distanceFilter: 10,           // fire every 10 meters movement
+          stopTimeout: 5,
+          debug: false,
+          logLevel: BGL.LOG_LEVEL_OFF,
+          stopOnTerminate: false,       // keep running when app closed
+          startOnBoot: true,            // auto-start after phone restart
+          foregroundService: true,      // cannot be killed by Android OS
+          notification: {
+            title: "ElectroServe Live 📡",
+            text: "GPS tracking active — app band mat karo",
+            color: "#3b82f6",
+          },
+        });
+
+        BGL.onLocation(loc => doSend(loc.coords.latitude, loc.coords.longitude));
+        await BGL.start();
+      } catch(e) {
+        console.warn("Native GPS failed, falling back to web:", e);
+        startWebGPS();
+      }
+    }
+
+    async function stopNativeGPS() {
+      try { window.BackgroundGeolocation?.stop(); } catch(e) {}
+    }
+
+    // ── WEB BROWSER MODE ────────────────────────────────────────────────
+    async function acquireWakeLock() {
+      if (!("wakeLock" in navigator)) return;
+      try { wakeLock = await navigator.wakeLock.request("screen"); } catch(e) {}
+    }
+    function releaseWakeLock() {
+      if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock = null; }
+    }
+
+    function startWebGPS() {
       if (!navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(
-        p => sendLocation(p.coords.latitude, p.coords.longitude).catch(()=>{}),
-        ()=>{}
-      );
+      if (webWatchId === null) {
+        webWatchId = navigator.geolocation.watchPosition(
+          p => doSend(p.coords.latitude, p.coords.longitude),
+          () => {},
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      }
+      if (fallbackId === null) {
+        fallbackId = setInterval(() => {
+          navigator.geolocation.getCurrentPosition(
+            p => doSend(p.coords.latitude, p.coords.longitude),
+            () => {},
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+          );
+        }, 15000);
+      }
+      acquireWakeLock();
+    }
+
+    function stopWebGPS() {
+      if (webWatchId !== null) { navigator.geolocation.clearWatch(webWatchId); webWatchId = null; }
+      if (fallbackId !== null) { clearInterval(fallbackId); fallbackId = null; }
+      releaseWakeLock();
+    }
+
+    // Visibility change — re-acquire wake lock on tab focus (web only)
+    const onVisibility = () => {
+      if (!document.hidden && !isNative) {
+        acquireWakeLock();
+        navigator.geolocation?.getCurrentPosition(
+          p => doSend(p.coords.latitude, p.coords.longitude),
+          () => {},
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
+      }
     };
-    send();
-    const t = setInterval(send, 30000);
-    return () => clearInterval(t);
+
+    const onOnline  = () => { toast("Internet wapas aa gaya ✅", "success"); };
+    const onOffline = () => { toast("Internet gaya ⚠️ — GPS chal raha hai, baad mein sync hoga", "warning", 5000); };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("online",  onOnline);
+    window.addEventListener("offline", onOffline);
+
+    // Start appropriate mode
+    if (isNative) {
+      startNativeGPS();
+    } else {
+      startWebGPS();
+    }
+
+    return () => {
+      if (isNative) stopNativeGPS(); else stopWebGPS();
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("online",  onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
   }, []);
 
   useEffect(() => { loadJobs(); }, []);
@@ -77,16 +195,19 @@ export default function TechApp({ user, onLogout }) {
   async function loadJobs() {
     setLoading(true);
     try {
-      const r = await fetch(`${API}/jobs/my-jobs`, { headers:authHeader() });
+      const r = await apiFetch(`${API}/jobs/my-jobs`, { headers:authHeader() });
+      if (r.status === 401) { return; } // api.js handles auto-logout
       const d = await r.json();
       setJobs(Array.isArray(d) ? d : []);
-    } catch(e) { console.error(e); }
+    } catch(e) {
+      if (e.message !== "Network error") toast("Jobs load nahi hue — retry karo", "error");
+    }
     finally { setLoading(false); }
   }
 
   async function loadHistory() {
     try {
-      const r = await fetch(`${API}/jobs/my-history`, { headers:authHeader() });
+      const r = await apiFetch(`${API}/jobs/my-history`, { headers:authHeader() });
       const d = await r.json();
       setHistory(Array.isArray(d) ? d.filter(j=>["DONE","CANCELLED"].includes(j.status)) : []);
     } catch(e) { console.error(e); }
@@ -97,22 +218,23 @@ export default function TechApp({ user, onLogout }) {
     if (newStatus === "DONE") { setStep("service"); return; }
     setUpdating(true);
     try {
-      const r = await fetch(`${API}/jobs/${jobId}`, {
+      const r = await apiFetch(`${API}/jobs/${jobId}`, {
         method:"PUT", headers:authHeader(), body:JSON.stringify({status:newStatus})
       });
       const d = await r.json();
       setSelected(d);
       loadJobs();
-    } catch(e) { alert("Update failed: " + e.message); }
+      toast("Status update ho gaya ✅", "success", 2000);
+    } catch(e) { toast("Update nahi hua: " + e.message, "error"); }
     finally { setUpdating(false); }
   }
 
   // ── STEP 1: Save service details ──────────────────────────────
   async function saveService() {
-    if (!sForm.serviceDetails.trim()) { alert("Kya kaam kiya — yeh zaroori hai"); return; }
+    if (!sForm.serviceDetails.trim()) { toast("Kya kaam kiya — yeh zaroori hai ⚠️", "warning"); return; }
     setSavingSvc(true);
     try {
-      const r = await fetch(`${API}/jobs/${selected.id}/complete`, {
+      const r = await apiFetch(`${API}/jobs/${selected.id}/complete`, {
         method:"PUT", headers:authHeader(), body:JSON.stringify(sForm)
       });
       const d = await r.json();
@@ -121,19 +243,19 @@ export default function TechApp({ user, onLogout }) {
       setSelected(prev=>({...prev, status:"DONE"}));
       loadJobs();
       setStep("invoice"); // → always go to invoice next
-    } catch(e) { alert("Error: " + e.message); }
+    } catch(e) { toast("Error: " + e.message, "error"); }
     finally { setSavingSvc(false); }
   }
 
   // ── STEP 2: Save invoice ───────────────────────────────────────
   async function saveInvoice() {
     const valid = items.filter(i=>i.name&&i.price);
-    if (!valid.length) { alert("Kam se kam ek service add karo"); return; }
+    if (!valid.length) { toast("Kam se kam ek service add karo ⚠️", "warning"); return; }
     const custId = doneData?.customer?.id || selected?.customer?.id;
-    if (!custId) { alert("Customer link nahi — invoice nahi ban sakta"); return; }
+    if (!custId) { toast("Customer link nahi — invoice nahi ban sakta ❌", "error"); return; }
     setSavingInv(true);
     try {
-      const r = await fetch(`${API}/invoices`, {
+      const r = await apiFetch(`${API}/invoices`, {
         method:"POST", headers:authHeader(),
         body:JSON.stringify({
           customerId:     custId,
@@ -148,7 +270,7 @@ export default function TechApp({ user, onLogout }) {
       if (!r.ok) throw new Error(inv.error || inv.message || `Server ${r.status}`);
       setInvoice(inv);
       setStep("done"); // → final screen
-    } catch(e) { alert("Invoice Error: " + e.message); }
+    } catch(e) { toast("Invoice Error: " + e.message, "error"); }
     finally { setSavingInv(false); }
   }
 
@@ -175,17 +297,28 @@ export default function TechApp({ user, onLogout }) {
     const cust = doneData?.customer || selected?.customer;
     const mob  = cust?.mobile || selected?.customerMobile;
     if (!mob || !invoice) return null;
-    const lines = invoice.items?.map(i=>`  • ${i.serviceName}: ${fmt(i.totalPrice)}`).join("\n")||"";
-    const paid  = payment==="Pending" ? "⏳ Payment abhi pending hai" : `✅ ${payment} se payment mila`;
+    const itemLines = invoice.items?.map(i=>`  • ${i.serviceName}: ₹${Number(i.totalPrice||0).toLocaleString("en-IN")}`).join("\n")||"";
+    const paid  = payment==="Pending" ? "⏳ Payment Pending" : `✅ ${payment} se Payment Received`;
     const hasW  = sForm.warrantyPeriod !== "No Warranty";
-    const msg   =
-      `🙏 *Namaste ${cust?.name||""}  ji!*\n\n`+
-      `Aapki *${selected?.machineType||""} (${selected?.machineBrand||""})* ki service complete ho gayi. ✅\n\n`+
-      `🧾 *Invoice: ${invoice.invoiceNumber}*\n${lines}\n\n`+
-      `💰 *Total: ${fmt(invoice.totalAmount)}*\n${paid}\n\n`+
+    const divider = "━━━━━━━━━━━━━━━━━━━━━";
+    const msg =
+      `🧾 *INVOICE — ${invoice.invoiceNumber}*\n`+
+      `${divider}\n\n`+
+      `👤 Customer: *${cust?.name||""}*\n`+
+      `📞 Mobile: ${mob}\n`+
+      `📅 Date: ${invoice.invoiceDate||sForm.serviceDate}\n\n`+
+      `🔧 Machine: ${selected?.machineType||""} ${selected?.machineBrand||""}\n`+
+      (sForm.serialNumber ? `🔢 Serial: ${sForm.serialNumber}\n` : "")+
+      `\n${divider}\n`+
+      `*Services Done:*\n${itemLines}\n`+
+      `${divider}\n\n`+
+      `💰 *Total: ₹${Number(invoice.totalAmount||0).toLocaleString("en-IN")}*\n`+
+      (invoice.discountAmt>0 ? `🎁 Discount Applied: ₹${invoice.discountAmt}\n` : "")+
+      `${paid}\n\n`+
       (hasW ? `🛡️ *Warranty: ${sForm.warrantyPeriod}*\n` : "")+
       `✅ Kaam kiya: ${sForm.serviceDetails}\n\n`+
-      `Dhanyawad aapka! 🙏\n- ${user?.name}, Matoshree Enterprises`;
+      `Dhanyawad aapka! Koi bhi problem pe hume call karein. 🙏\n`+
+      `— *${user?.name}*, Matoshree Enterprises`;
     return `https://wa.me/91${mob}?text=${encodeURIComponent(msg)}`;
   }
 
@@ -193,15 +326,23 @@ export default function TechApp({ user, onLogout }) {
     const cust = doneData?.customer || selected?.customer;
     const mob  = cust?.mobile || selected?.customerMobile;
     if (!mob) return null;
+    const divider = "━━━━━━━━━━━━━━━━━━━━━";
     const msg =
-      `🛡️ *WARRANTY CARD - Matoshree Enterprises*\n\n`+
-      `Customer: ${cust?.name||""}\n`+
-      `Machine: ${selected?.machineType||""} (${selected?.machineBrand||""})\n`+
-      `Serial No: ${sForm.serialNumber||"—"}\n`+
-      `Service Date: ${sForm.serviceDate}\n`+
-      `Warranty: ${sForm.warrantyPeriod}\n\n`+
-      `✅ Kaam kiya: ${sForm.serviceDetails}\n\n`+
-      `Warranty ke liye humara number save karein.\n- Matoshree Enterprises`;
+      `🛡️ *WARRANTY CARD*\n`+
+      `*Matoshree Enterprises*\n`+
+      `${divider}\n\n`+
+      `👤 Customer: *${cust?.name||""}*\n`+
+      `📞 Mobile: ${mob}\n\n`+
+      `🔧 Machine: ${selected?.machineType||""} (${selected?.machineBrand||""})\n`+
+      (sForm.serialNumber ? `🔢 Serial No: ${sForm.serialNumber}\n` : "")+
+      `📅 Service Date: ${sForm.serviceDate}\n`+
+      `🛡️ Warranty Period: *${sForm.warrantyPeriod}*\n\n`+
+      `${divider}\n`+
+      `✅ Kaam kiya:\n${sForm.serviceDetails}\n`+
+      `${divider}\n\n`+
+      `⚠️ Warranty sirf normal use ke liye valid hai.\n`+
+      `Warranty claim ke liye humara number save karein.\n\n`+
+      `— *Matoshree Enterprises*`;
     return `https://wa.me/91${mob}?text=${encodeURIComponent(msg)}`;
   }
 
@@ -233,8 +374,31 @@ export default function TechApp({ user, onLogout }) {
           <div className="tech-mob-greeting">Jai Hind 👋</div>
           <div className="tech-mob-name">{user?.name}</div>
         </div>
-        <button className="tech-mob-logout" onClick={onLogout}>Logout</button>
+        <button className="tech-mob-logout" onClick={async () => {
+          try { await fetch(`${API}/location`, { method:"DELETE", headers:authHeader() }); } catch(e){}
+          onLogout();
+        }}>Logout</button>
       </div>
+
+      {/* Live GPS indicator */}
+      {(() => {
+        const cfg = {
+          ok:       { bg:"rgba(16,185,129,0.08)",  border:"rgba(16,185,129,0.25)",  dot:"#10b981", text:"#065f46",  title:"📡 Live GPS Active",          sub:"Location track ho rahi hai — app band mat karo" },
+          error:    { bg:"rgba(239,68,68,0.08)",   border:"rgba(239,68,68,0.25)",   dot:"#ef4444", text:"#991b1b",  title:"⚠️ GPS Error",                 sub:"Location send nahi ho rahi — internet check karo" },
+          starting: { bg:"rgba(245,158,11,0.08)",  border:"rgba(245,158,11,0.25)",  dot:"#f59e0b", text:"#92400e",  title:"📡 GPS Start Ho Raha Hai...",  sub:"Thoda wait karo — permission allow karo agar popup aaye" },
+        }[gpsStatus] || {};
+        return (
+          <div style={{ margin:"10px 12px 0", padding:"8px 14px", borderRadius:12, background:cfg.bg, border:`1px solid ${cfg.border}`, display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{ width:8, height:8, borderRadius:"50%", background:cfg.dot, flexShrink:0,
+              animation: gpsStatus==="ok" ? "gps-pulse 1.8s infinite" : "none" }} />
+            <div style={{flex:1}}>
+              <div style={{fontSize:12, fontWeight:700, color:cfg.text}}>{cfg.title}</div>
+              <div style={{fontSize:10, color:"#6b7280", marginTop:1}}>{cfg.sub}</div>
+            </div>
+            <style>{`@keyframes gps-pulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,0.7)}70%{box-shadow:0 0 0 8px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}`}</style>
+          </div>
+        );
+      })()}
 
       <div className="tech-mob-stats">
         <Stat num={jobs.length}          label="Active" />
@@ -342,6 +506,14 @@ export default function TechApp({ user, onLogout }) {
                   <div className="tech-detail-machine">🖥️ {selected.machineType} {selected.machineBrand}</div>
                 )}
               </div>
+
+              {/* Owner ke notes — agar hain toh dikhao */}
+              {selected.notes && (
+                <div className="tech-detail-card" style={{background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.2)"}}>
+                  <div className="tech-detail-card-title" style={{color:"#d97706"}}>📝 Owner Notes</div>
+                  <div style={{fontSize:13,color:"#92400e",lineHeight:1.5}}>{selected.notes}</div>
+                </div>
+              )}
 
               {!done && mob && (
                 <a href={`https://wa.me/91${mob}?text=${encodeURIComponent(`Namaste! Main ${user?.name} hoon, Matoshree Enterprises se. Aapka ${selected.machineType||"machine"} dekhne aa raha hoon.`)}`}
@@ -633,7 +805,10 @@ export default function TechApp({ user, onLogout }) {
 
 // ── Tiny helper components ────────────────────────────────────────────────────
 function row() { return {name:"",qty:1,price:""}; }
-function today() { return new Date().toISOString().split("T")[0]; }
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
 
 function Stat({num,label,color,onClick}) {
   return <div className="tech-mob-stat" onClick={onClick} style={onClick?{cursor:"pointer"}:{}}>
