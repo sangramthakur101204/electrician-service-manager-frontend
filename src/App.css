@@ -1517,9 +1517,17 @@ html, body { overflow-x: hidden !important; max-width: 100vw; }
   -webkit-overflow-scrolling: touch;
 }
 
-/* ── ANDROID + IOS SCROLL FIX ── */
+/* ── MOBILE ROOT ── */
 .mobile-root {
-  overflow-x: clip;
+  min-height: 100vh;
+  padding-bottom: 70px;
+  overflow-x: hidden;
+  /* Android Chrome scroll fix */
+  -webkit-overflow-scrolling: touch;
+}
+.mobile-root * {
+  /* Ensure no element blocks touch events */
+  pointer-events: auto;
 }
 
 /* ============================================================
@@ -1536,4 +1544,27 @@ html, body { overflow-x: hidden !important; max-width: 100vw; }
   .stats-grid       { grid-template-columns: repeat(2,1fr) !important; }
   .job-filter-row   { overflow-x: auto !important; flex-wrap: nowrap !important; }
   table             { display: block !important; overflow-x: auto !important; }
+}
+
+/* ── ANALYTICS KPI GRID ── */
+.analytics-kpi-row {
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 900px) {
+  .analytics-kpi-row { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 480px) {
+  .analytics-kpi-row { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+}
+
+/* ── ANALYTICS CHART GRIDS ── */
+.analytics-chart-row {
+  grid-template-columns: repeat(2, 1fr);
+}
+.analytics-chart-row-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: 900px) {
+  .analytics-chart-row   { grid-template-columns: 1fr !important; }
+  .analytics-chart-row-3 { grid-template-columns: 1fr !important; }
 }

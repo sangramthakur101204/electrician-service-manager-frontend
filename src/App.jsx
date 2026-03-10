@@ -119,7 +119,7 @@ export default function App() {
   // ══════════════════════════════════════════════════════
   if (isMobile) {
     return (
-      <div style={{ minHeight:"100vh", background:"var(--bg-primary)", paddingBottom:80, fontFamily:"var(--font-body)" }} className="mobile-root">
+      <div style={{ background:"var(--bg-primary)", fontFamily:"var(--font-body)" }} className="mobile-root">
 
         {/* Mobile top bar — slim */}
         <header style={{
