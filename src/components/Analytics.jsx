@@ -247,7 +247,7 @@ export default function Analytics({ customers = [] }) {
       )}
 
       {/* Row: Monthly Revenue + Last 7 days */}
-      <div className="analytics-chart-row" style={{display:"grid",gap:16}}>
+      <div className="an-row-2-1" style={{display:"grid",gap:16}}>
 
         <Card>
           <Title icon="📈" title="Monthly Revenue Trend" sub="Paid invoices — last 8 months"/>
@@ -293,7 +293,7 @@ export default function Analytics({ customers = [] }) {
 
       {/* Row: Technician revenue + Payment methods */}
       {(techData.length>0||payData.length>0) && (
-        <div className="analytics-chart-row" style={{display:"grid",gap:16}}>
+        <div className="an-row-2-1" style={{display:"grid",gap:16}}>
           {techData.length>0 && (
             <Card>
               <Title icon="👷" title="Technician-wise Revenue" sub="Paid invoices per technician"/>
@@ -339,7 +339,7 @@ export default function Analytics({ customers = [] }) {
 
       {/* Row: Machine Types + Top Brands + Warranty */}
       {total>0 && (
-        <div style={{display:"grid",gap:16}} className="analytics-chart-row-3">
+        <div className="an-row-3" style={{display:"grid",gap:16}}>
 
           <Card>
             <Title icon="🔧" title="Machine Types" sub="Kaunsi machine zyada aati hai"/>
@@ -399,7 +399,7 @@ export default function Analytics({ customers = [] }) {
 
       {/* Row: Job Status + Monthly Service Trend */}
       {total>0 && (
-        <div className="analytics-chart-row" style={{display:"grid",gap:16}}>
+        <div className="an-row-1-2" style={{display:"grid",gap:16}}>
 
           <Card>
             <Title icon="🎯" title="Job Status" sub="Completed vs Pending"/>

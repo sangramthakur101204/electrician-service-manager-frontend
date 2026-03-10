@@ -2,14 +2,13 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  overflow-x: hidden;
+  /* NO overflow-x:hidden on html — Android Chrome blocks Y scroll */
 }
 
 html, body {
   margin: 0; padding: 0;
-  width: 100%; 
-  overflow-x: hidden;
-  overscroll-behavior: none;
+  width: 100%;
+  /* overscroll-behavior:none blocks pull-to-refresh on Android */
 }
 
 body {
@@ -18,13 +17,13 @@ body {
   background-color: #f1f5f9;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 #root {
   display: flex;
   flex-direction: column;
   width: 100%;
-  overflow-x: hidden;
 }
 
 button {
