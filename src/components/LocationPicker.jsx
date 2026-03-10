@@ -70,6 +70,7 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
   const [gpsLoad,    setGpsLoad]    = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSug,    setShowSug]    = useState(false);
+  const [showManual, setShowManual] = useState(false);
   const debounceRef  = useRef(null);
 
   useEffect(() => {
@@ -300,13 +301,22 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
           </div>
         </div>
 
+        {/* Manual address warning */}
+        {showManual && (
+          <div style={{ flexShrink:0, padding:"8px 14px", background:"#fffbeb", borderTop:"1px solid #fde68a", fontSize:12, color:"#92400e", display:"flex", alignItems:"center", gap:8 }}>
+            <span>⚠️</span>
+            <span><b>Map pin nahi gaya</b> — sirf address text save hoga, pin/distance kaam nahi karega</span>
+            <button onClick={()=>setShowManual(false)} style={{marginLeft:"auto",fontSize:11,color:"#92400e",background:"none",border:"none",cursor:"pointer",fontWeight:700}}>✕</button>
+          </div>
+        )}
+
         {/* Footer */}
         <div style={{ flexShrink:0, display:"flex", gap:8, padding:"10px 14px", borderTop:"1px solid #e2e8f0", background:"#fff" }}>
           <button onClick={onClose} style={{ flex:1, padding:"11px", borderRadius:10, border:"1.5px solid #e2e8f0", background:"#f8fafc", color:"#64748b", fontWeight:700, fontSize:13, cursor:"pointer" }}>
             Cancel
           </button>
-          <button onClick={confirm} disabled={!addr || geocoding}
-            style={{ flex:2, padding:"11px", borderRadius:10, border:"none", background:(!addr||geocoding)?"#e2e8f0":"linear-gradient(135deg,#3b82f6,#2563eb)", color:(!addr||geocoding)?"#94a3b8":"#fff", fontWeight:800, fontSize:13, cursor:(!addr||geocoding)?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+          <button onClick={confirm} disabled={geocoding}
+            style={{ flex:2, padding:"11px", borderRadius:10, border:"none", background:geocoding?"#e2e8f0":"linear-gradient(135deg,#3b82f6,#2563eb)", color:geocoding?"#94a3b8":"#fff", fontWeight:800, fontSize:13, cursor:geocoding?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
             ✅ Yahi Location Set Karo
           </button>
         </div>

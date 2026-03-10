@@ -165,6 +165,8 @@ export default function JobAssign() {
 
   // Owner only assigns technician — status changes happen via TechApp
   const [assignWaUrl, setAssignWaUrl] = useState("");
+  const [mapsRedirectUrl, setMapsRedirectUrl] = useState("");
+  const [showMapsPopup, setShowMapsPopup] = useState(false);
 
   const assignTechnician = async (jobId, technicianId) => {
     try {
@@ -178,6 +180,16 @@ export default function JobAssign() {
       if (waUrl) setAssignWaUrl(waUrl);
       fetchAll();
       toast("✅ Technician assign ho gaya!", "success");
+
+      // Google Maps redirect — job location pe navigate karo
+      const job = data.job || data;
+      const jLat = job?.latitude || job?.customerLatitude;
+      const jLng = job?.longitude || job?.customerLongitude;
+      if (jLat && jLng) {
+        const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${jLat},${jLng}&travelmode=driving`;
+        setMapsRedirectUrl(mapsUrl);
+        setShowMapsPopup(true);
+      }
     } catch(e) { toast("Assign karne mein error", "error"); }
   };
 
@@ -599,6 +611,28 @@ export default function JobAssign() {
               <button onClick={() => { setWaUrl(""); setShowForm(false); resetForm(); }}
                 style={{ padding:"12px", background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:12, fontWeight:600, color:"#64748b", cursor:"pointer" }}>
                 Skip
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Google Maps redirect popup */}
+      {showMapsPopup && mapsRedirectUrl && (
+        <div style={{ position:"fixed", inset:0, zIndex:99999, background:"rgba(0,0,0,0.5)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:"#fff", borderRadius:20, padding:28, maxWidth:340, width:"100%", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>🗺️</div>
+            <div style={{ fontWeight:800, fontSize:18, color:"#1e293b", marginBottom:8 }}>Google Maps pe Navigate Karo?</div>
+            <div style={{ fontSize:13, color:"#64748b", marginBottom:20, lineHeight:1.5 }}>Technician ko customer ke ghar ka raasta dikhana hai?</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              <a href={mapsRedirectUrl} target="_blank" rel="noreferrer"
+                onClick={() => setShowMapsPopup(false)}
+                style={{ padding:"13px", borderRadius:12, background:"linear-gradient(135deg,#3b82f6,#2563eb)", color:"#fff", fontWeight:800, fontSize:14, textDecoration:"none", display:"block" }}>
+                🚗 Google Maps Kholo
+              </a>
+              <button onClick={() => setShowMapsPopup(false)}
+                style={{ padding:"11px", borderRadius:12, border:"1.5px solid #e2e8f0", background:"#f8fafc", color:"#64748b", fontWeight:700, fontSize:13, cursor:"pointer" }}>
+                Baad Mein
               </button>
             </div>
           </div>
