@@ -382,24 +382,6 @@ export default function TechApp({ user, onLogout }) {
 
       {/* Live GPS indicator */}
       {(() => {
-        const cfg = {
-          ok:       { bg:"rgba(16,185,129,0.08)",  border:"rgba(16,185,129,0.25)",  dot:"#10b981", text:"#065f46",  title:"📡 Live GPS Active",          sub:"Location track ho rahi hai — app band mat karo" },
-          error:    { bg:"rgba(239,68,68,0.08)",   border:"rgba(239,68,68,0.25)",   dot:"#ef4444", text:"#991b1b",  title:"⚠️ GPS Error",                 sub:"Location send nahi ho rahi — internet check karo" },
-          starting: { bg:"rgba(245,158,11,0.08)",  border:"rgba(245,158,11,0.25)",  dot:"#f59e0b", text:"#92400e",  title:"📡 GPS Start Ho Raha Hai...",  sub:"Thoda wait karo — permission allow karo agar popup aaye" },
-        }[gpsStatus] || {};
-        return (
-          <div style={{ margin:"10px 12px 0", padding:"8px 14px", borderRadius:12, background:cfg.bg, border:`1px solid ${cfg.border}`, display:"flex", alignItems:"center", gap:8 }}>
-            <div style={{ width:8, height:8, borderRadius:"50%", background:cfg.dot, flexShrink:0,
-              animation: gpsStatus==="ok" ? "gps-pulse 1.8s infinite" : "none" }} />
-            <div style={{flex:1}}>
-              <div style={{fontSize:12, fontWeight:700, color:cfg.text}}>{cfg.title}</div>
-              <div style={{fontSize:10, color:"#6b7280", marginTop:1}}>{cfg.sub}</div>
-            </div>
-            <style>{`@keyframes gps-pulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,0.7)}70%{box-shadow:0 0 0 8px rgba(16,185,129,0)}100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}}`}</style>
-          </div>
-        );
-      })()}
-
       <div className="tech-mob-stats">
         <Stat num={jobs.length}          label="Active" />
         <div className="tech-mob-stat-divider"/>

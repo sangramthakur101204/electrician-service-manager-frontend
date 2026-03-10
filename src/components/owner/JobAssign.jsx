@@ -270,8 +270,8 @@ export default function JobAssign() {
 
       {/* ── CREATE JOB FORM ── */}
       {showForm && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:16, backdropFilter:"blur(4px)" }}>
-          <div style={{ background:"#fff", borderRadius:20, width:"100%", maxWidth:640, maxHeight:"90vh", overflow:"visible", boxShadow:"0 24px 64px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column" }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.55)", display:"flex", alignItems: window.innerWidth < 768 ? "flex-end" : "center", justifyContent:"center", zIndex:200, padding: window.innerWidth < 768 ? 0 : 16, backdropFilter:"blur(4px)" }}>
+          <div style={{ background:"#fff", borderRadius: window.innerWidth < 768 ? "20px 20px 0 0" : 20, width:"100%", maxWidth:640, height: window.innerWidth < 768 ? "95vh" : "auto", maxHeight: window.innerWidth < 768 ? "95vh" : "90vh", overflow:"visible", boxShadow:"0 24px 64px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column" }}>
 
             {/* Modal header — fixed at top */}
             <div style={{ padding:"20px 24px", borderBottom:"1px solid #e2e8f0", display:"flex", justifyContent:"space-between", alignItems:"center", background:"#fff", borderRadius:"20px 20px 0 0", flexShrink:0 }}>

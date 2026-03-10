@@ -110,7 +110,7 @@ export default function App() {
       {activeTab === "invoices"    && <AllInvoices />}
       {activeTab === "analytics"   && <Analytics customers={customers} />}
       {activeTab === "reminders"   && <Reminders expiring={expiring} customers={customers} onRefresh={fetchAll} />}
-      {activeTab === "settings"    && <Settings />}
+      {activeTab === "settings"    && <Settings onLogout={handleLogout} />}
     </>
   );
 

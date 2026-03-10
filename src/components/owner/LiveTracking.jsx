@@ -439,8 +439,11 @@ export default function LiveTracking({ onNavigate }) {
             <div style={{ fontSize:52 }}>📡</div>
             <div style={{ fontWeight:700, color:"#64748b", fontSize:16 }}>Koi technician live nahi</div>
             <div style={{ fontSize:13, color:"#94a3b8", maxWidth:300, textAlign:"center", lineHeight:1.5 }}>
-              Jab technician app open karega, location 30s mein yahan aayegi
+              Technician ka app open hona chahiye aur internet connection hona chahiye
             </div>
+            <button onClick={fetchData} style={{ marginTop:8, padding:"10px 20px", background:"#3b82f6", color:"#fff", border:"none", borderRadius:10, fontWeight:700, cursor:"pointer", fontSize:13 }}>
+              🔄 Refresh
+            </button>
           </div>
         ) : (
           <>
