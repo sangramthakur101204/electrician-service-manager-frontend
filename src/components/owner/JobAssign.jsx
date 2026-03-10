@@ -363,7 +363,7 @@ export default function JobAssign() {
             </div>
 
             {/* Scrollable form body */}
-            <div style={{ padding:"0 20px 24px", display:"flex", flexDirection:"column", gap:16, overflowY:"auto", flex:1, minHeight:0, WebkitOverflowScrolling:"touch" }}
+            <div style={{ padding:"16px 20px 24px", display:"flex", flexDirection:"column", gap:16, overflowY:"auto", flex:1, minHeight:0, WebkitOverflowScrolling:"touch" }}
               onTouchMove={e => e.stopPropagation()}>
 
               {/* ── NEW CUSTOMER FIELDS (inside scroll since no dropdown needed) ── */}
@@ -783,8 +783,8 @@ const inp = {
 
 function Section({ title, children }) {
   return (
-    <div style={{ border:"1px solid #f1f5f9", borderRadius:12, overflow:"hidden" }}>
-      <div style={{ padding:"10px 16px", background:"#f8fafc", borderBottom:"1px solid #f1f5f9", fontSize:12, fontWeight:700, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.05em" }}>{title}</div>
+    <div style={{ border:"1px solid #f1f5f9", borderRadius:12 }}>
+      <div style={{ padding:"10px 16px", background:"#f8fafc", borderBottom:"1px solid #f1f5f9", fontSize:12, fontWeight:700, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.05em", borderRadius:"12px 12px 0 0" }}>{title}</div>
       <div style={{ padding:16 }}>{children}</div>
     </div>
   );
