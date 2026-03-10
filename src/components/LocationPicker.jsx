@@ -188,7 +188,11 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
     if (results.length) {
       pickSuggestion(results[0]);
     } else {
-      toast("Address nahi mila — thoda aur detail daalo (city ka naam bhi likho)", "warning");
+      // Location nahi mili — typed text ko hi address save karo
+      setAddr(searchQ.trim());
+      setPinPlaced(false);
+      setShowManual(true);
+      toast("Map pe pin nahi mila — address text save hoga. Technician Google Maps mein search kar sakega.", "warning", 4000);
     }
     setGeocoding(false);
   }
@@ -328,9 +332,9 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
           <button onClick={onClose} style={{ flex:1, padding:"11px", borderRadius:10, border:"1.5px solid #e2e8f0", background:"#f8fafc", color:"#64748b", fontWeight:700, fontSize:13, cursor:"pointer" }}>
             Cancel
           </button>
-          <button onClick={confirm} disabled={geocoding}
-            style={{ flex:2, padding:"11px", borderRadius:10, border:"none", background:geocoding?"#e2e8f0":"linear-gradient(135deg,#3b82f6,#2563eb)", color:geocoding?"#94a3b8":"#fff", fontWeight:800, fontSize:13, cursor:geocoding?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-            ✅ Yahi Location Set Karo
+          <button onClick={confirm} disabled={geocoding || !addr.trim()}
+            style={{ flex:2, padding:"11px", borderRadius:10, border:"none", background:(geocoding||!addr.trim())?"#e2e8f0": pinPlaced ? "linear-gradient(135deg,#3b82f6,#2563eb)" : "linear-gradient(135deg,#f59e0b,#d97706)", color:(geocoding||!addr.trim())?"#94a3b8":"#fff", fontWeight:800, fontSize:13, cursor:(geocoding||!addr.trim())?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+            {pinPlaced ? "✅ Yahi Location Set Karo" : (addr.trim() ? "💾 Text Address Save Karo" : "✅ Yahi Location Set Karo")}
           </button>
         </div>
       </div>
