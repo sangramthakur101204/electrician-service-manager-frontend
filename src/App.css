@@ -966,10 +966,12 @@ tbody tr:last-child td { border-bottom: none; }
   .topbar-nav { display:none; }
   .topbar-menu-btn { display:flex; }
   .stats-grid { grid-template-columns:repeat(2,1fr); }
-  .odash-grid { grid-template-columns:1fr; }
+  .odash-grid { grid-template-columns:1fr !important; width:100% !important; }
   .tech-form-grid { grid-template-columns:1fr; }
-  .content-area { padding:16px; }
-  .odash-stats-grid { grid-template-columns:repeat(2,1fr); }
+  .content-area { padding:12px !important; width:100% !important; box-sizing:border-box !important; }
+  .odash-stats-grid { grid-template-columns:repeat(2,1fr) !important; gap:8px !important; }
+  .odash-section { min-width:0 !important; width:100% !important; overflow-x:hidden !important; }
+  .odash-graph { overflow-x:auto !important; }
 }
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns:1fr 1fr; }

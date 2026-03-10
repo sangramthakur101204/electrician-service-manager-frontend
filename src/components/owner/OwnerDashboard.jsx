@@ -99,7 +99,7 @@ export default function OwnerDashboard({ customers, expiring, onNavigate }) {
   ];
 
   return (
-    <div className="owner-dash">
+    <div className="owner-dash" style={{width:"100%", maxWidth:"100%", overflowX:"hidden", boxSizing:"border-box"}}>
 
       {/* ══ MODALS ══════════════════════════════════════════════ */}
       {modal && (

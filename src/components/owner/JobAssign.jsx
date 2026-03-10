@@ -42,6 +42,7 @@ const STATUS_LABEL = {
 
 export default function JobAssign() {
   const toast = useToast();
+  const isMob = window.innerWidth < 768;
   const [jobs,         setJobs]         = useState([]);
   const [technicians,  setTechnicians]  = useState([]);
   const [customers,    setCustomers]    = useState([]);
@@ -270,8 +271,10 @@ export default function JobAssign() {
 
       {/* ── CREATE JOB FORM ── */}
       {showForm && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.55)", display:"flex", alignItems: window.innerWidth < 768 ? "flex-end" : "center", justifyContent:"center", zIndex:200, padding: window.innerWidth < 768 ? 0 : 16, backdropFilter:"blur(4px)" }}>
-          <div style={{ background:"#fff", borderRadius: window.innerWidth < 768 ? "20px 20px 0 0" : 20, width:"100%", maxWidth:640, height: window.innerWidth < 768 ? "92vh" : "88vh", overflow:"hidden", boxShadow:"0 24px 64px rgba(0,0,0,0.18)", display:"flex", flexDirection:"column" }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.6)", display:"flex", alignItems: isMob ? "flex-end" : "center", justifyContent:"center", zIndex:9999 }}
+          onClick={e => { if(e.target===e.currentTarget){setShowForm(false);resetForm();} }}
+          onTouchMove={e => e.preventDefault()}>
+          <div style={{ background:"#fff", borderRadius: isMob ? "20px 20px 0 0" : 16, width:"100%", maxWidth: isMob ? "100%" : 620, height: isMob ? "93vh" : "86vh", display:"flex", flexDirection:"column", overflow:"hidden", boxShadow:"0 -4px 40px rgba(0,0,0,0.2)" }}>
 
             {/* Modal header — fixed at top */}
             <div style={{ padding:"20px 24px", borderBottom:"1px solid #e2e8f0", display:"flex", justifyContent:"space-between", alignItems:"center", background:"#fff", borderRadius:"20px 20px 0 0", flexShrink:0 }}>
@@ -359,8 +362,9 @@ export default function JobAssign() {
               </Section>
             </div>
 
-            {/* Scrollable form body — machine, problem, technician, submit */}
-            <div style={{ padding:"0 24px 24px", display:"flex", flexDirection:"column", gap:20, overflowY:"auto", flex:1, minHeight:0 }}>
+            {/* Scrollable form body */}
+            <div style={{ padding:"0 20px 24px", display:"flex", flexDirection:"column", gap:16, overflowY:"auto", flex:1, minHeight:0, WebkitOverflowScrolling:"touch" }}
+              onTouchMove={e => e.stopPropagation()}>
 
               {/* ── NEW CUSTOMER FIELDS (inside scroll since no dropdown needed) ── */}
               {isNewCus && !selectedCus && (
