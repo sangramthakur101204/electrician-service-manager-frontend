@@ -71,6 +71,7 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
   const [suggestions, setSuggestions] = useState([]);
   const [showSug,    setShowSug]    = useState(false);
   const [showManual, setShowManual] = useState(false);
+  const [pinPlaced,  setPinPlaced]  = useState(!!(latitude && longitude)); // true if real coords exist
   const debounceRef  = useRef(null);
 
   useEffect(() => {
@@ -121,6 +122,8 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
       marker.on("dragend", async e => {
         const p = e.target.getLatLng();
         setCoords({ lat: p.lat, lng: p.lng });
+        setPinPlaced(true);
+        setShowManual(false);
         setGeocoding(true);
         const a = await reverseGeocodeAddr(p.lat, p.lng);
         setAddr(a); setSearchQ(a); setGeocoding(false);
@@ -130,6 +133,8 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
         const { lat, lng } = e.latlng;
         marker.setLatLng([lat, lng]);
         setCoords({ lat, lng });
+        setPinPlaced(true);
+        setShowManual(false);
         setGeocoding(true);
         const a = await reverseGeocodeAddr(lat, lng);
         setAddr(a); setSearchQ(a); setGeocoding(false);
@@ -168,6 +173,8 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
     setCoords({ lat: s.lat, lng: s.lng });
     setAddr(s.label); setSearchQ(s.label);
     setSuggestions([]); setShowSug(false);
+    setPinPlaced(true);
+    setShowManual(false);
     if (leafMap.current && pinMarker.current) {
       leafMap.current.flyTo([s.lat, s.lng], 17);
       pinMarker.current.setLatLng([s.lat, s.lng]);
@@ -198,6 +205,8 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
           pinMarker.current.setLatLng([lat, lng]);
         }
         setGeocoding(true);
+        setPinPlaced(true);
+        setShowManual(false);
         const a = await reverseGeocodeAddr(lat, lng);
         setAddr(a); setSearchQ(a); setGeocoding(false); setGpsLoad(false);
       },
@@ -207,7 +216,11 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
 
   function confirm() {
     if (!addr) return;
-    onLocationSelect({ address: addr, latitude: coords.lat.toFixed(6), longitude: coords.lng.toFixed(6) });
+    onLocationSelect({
+      address: addr,
+      latitude:  pinPlaced ? coords.lat.toFixed(6) : null,
+      longitude: pinPlaced ? coords.lng.toFixed(6) : null,
+    });
     onClose();
   }
 
