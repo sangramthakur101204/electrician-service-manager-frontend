@@ -68,6 +68,15 @@ export default function App() {
     if (user?.role === "OWNER") fetchAll();
   }, [user]);
 
+  // Keep-alive: Render free tier ko jaagta rakhta hai (har 9 min mein ping)
+  useEffect(() => {
+    const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
+    const ping = () => fetch(`${API}/health`, { method: "GET" }).catch(() => {});
+    ping();
+    const interval = setInterval(ping, 9 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const fetchAll = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     else setLoading(true);
