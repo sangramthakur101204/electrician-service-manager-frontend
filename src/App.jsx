@@ -119,7 +119,7 @@ export default function App() {
   // ══════════════════════════════════════════════════════
   if (isMobile) {
     return (
-      <div style={{ minHeight:"100vh", width:"100vw", maxWidth:"100vw", overflowX:"hidden", background:"var(--bg-primary)", paddingBottom:65, fontFamily:"var(--font-body)" }}>
+      <div style={{ minHeight:"100vh", background:"var(--bg-primary)", paddingBottom:80, fontFamily:"var(--font-body)" }} className="mobile-root">
 
         {/* Mobile top bar — slim */}
         <header style={{
@@ -154,7 +154,7 @@ export default function App() {
         </header>
 
         {/* Content */}
-        <div style={{ padding:"12px 12px 0", width:"100%", maxWidth:"100vw", overflowX:"hidden", boxSizing:"border-box" }}>
+        <div style={{ padding:"12px 12px 0" }}>
           {content}
         </div>
 
