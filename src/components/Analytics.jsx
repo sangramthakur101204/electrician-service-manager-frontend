@@ -176,10 +176,10 @@ export default function Analytics({ customers = [] }) {
   const CHART_H_SM = 160;
 
   return (
-    <div style={{display:"flex",flexDirection:"column",gap:20}}>
+    <div style={{display:"flex",flexDirection:"column",gap:20,width:"100%",maxWidth:"100%",boxSizing:"border-box"}}>
 
       {/* KPI Row 1 — Revenue */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12}}>
         {[
           {icon:"💰",val:fmt(totalRev),  label:"Total Revenue",     bg:"#f0fdf4",ibg:"#dcfce7", onClick:null},
           {icon:"⏳",val:fmt(pendingRev),label:"Pending Amount",    bg:"#fef2f2",ibg:"#fee2e2", onClick:null},
@@ -228,7 +228,7 @@ export default function Analytics({ customers = [] }) {
 
       {/* KPI Row 2 — Customers */}
       {total>0 && (
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12}}>
           {[
             {icon:"👥",val:total,          label:"Total Customers",  bg:"#eff6ff",ibg:"#dbeafe"},
             {icon:"✅",val:done,           label:"Jobs Completed",   bg:"#f0fdf4",ibg:"#dcfce7"},
@@ -247,7 +247,7 @@ export default function Analytics({ customers = [] }) {
       )}
 
       {/* Row: Monthly Revenue + Last 7 days */}
-      <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:16}}>
+      <div style={{display:"grid",gridTemplateColumns:"minmax(0,2fr) minmax(0,1fr)",gap:16}}>
 
         <Card>
           <Title icon="📈" title="Monthly Revenue Trend" sub="Paid invoices — last 8 months"/>
@@ -293,7 +293,7 @@ export default function Analytics({ customers = [] }) {
 
       {/* Row: Technician revenue + Payment methods */}
       {(techData.length>0||payData.length>0) && (
-        <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"minmax(0,2fr) minmax(0,1fr)",gap:16}}>
           {techData.length>0 && (
             <Card>
               <Title icon="👷" title="Technician-wise Revenue" sub="Paid invoices per technician"/>
@@ -339,7 +339,7 @@ export default function Analytics({ customers = [] }) {
 
       {/* Row: Machine Types + Top Brands + Warranty */}
       {total>0 && (
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:16}}>
 
           <Card>
             <Title icon="🔧" title="Machine Types" sub="Kaunsi machine zyada aati hai"/>
@@ -399,7 +399,7 @@ export default function Analytics({ customers = [] }) {
 
       {/* Row: Job Status + Monthly Service Trend */}
       {total>0 && (
-        <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,2fr)",gap:16}}>
 
           <Card>
             <Title icon="🎯" title="Job Status" sub="Completed vs Pending"/>
