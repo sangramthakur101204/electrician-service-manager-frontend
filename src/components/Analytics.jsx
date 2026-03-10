@@ -175,6 +175,12 @@ export default function Analytics({ customers = [] }) {
   const CHART_H = 200;
   const CHART_H_SM = 160;
 
+  if (loading) return (
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:80,color:"#94a3b8",fontSize:14}}>
+      ⚡ Analytics load ho raha hai...
+    </div>
+  );
+
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20,width:"100%",maxWidth:"100%",boxSizing:"border-box"}}>
 
@@ -186,14 +192,14 @@ export default function Analytics({ customers = [] }) {
           {icon:"❌",val:cancelledJobs.length, label:"Cancelled Jobs", bg:"#fef2f2",ibg:"#fee2e2", onClick:()=>setCancelledModal(true), clickable:true},
           {icon:"📊",val:fmt(weekRev),  label:"Is Hafte Ki Earning", bg:"#fffbeb",ibg:"#fef3c7", onClick:null},
         ].map((k,i)=>(
-          <div key={i} onClick={k.onClick||undefined}
-            style={{background:k.bg,borderRadius:14,padding:18,border:`1.5px solid ${k.clickable?"rgba(239,68,68,0.3)":"#e2e8f0"}`,boxShadow:"0 2px 8px rgba(0,0,0,0.05)",display:"flex",alignItems:"center",gap:14,cursor:k.clickable?"pointer":"default",transition:"all 0.15s"}}
+          <div key={i} onClick={k.onClick||undefined} className="an-kpi-card"
+            style={{background:k.bg,borderRadius:14,border:`1.5px solid ${k.clickable?"rgba(239,68,68,0.3)":"#e2e8f0"}`,boxShadow:"0 2px 8px rgba(0,0,0,0.05)",display:"flex",alignItems:"center",cursor:k.clickable?"pointer":"default",transition:"all 0.15s"}}
             onMouseEnter={e=>{ if(k.clickable) e.currentTarget.style.transform="translateY(-2px)"; }}
             onMouseLeave={e=>{ if(k.clickable) e.currentTarget.style.transform="translateY(0)"; }}>
-            <div style={{width:48,height:48,borderRadius:12,background:k.ibg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{k.icon}</div>
-            <div>
-              <div style={{fontSize:22,fontWeight:900,color:"#1e293b",lineHeight:1}}>{k.val}</div>
-              <div style={{fontSize:12,color:"#64748b",marginTop:4,fontWeight:500}}>{k.label}{k.clickable&&<span style={{color:"#ef4444",marginLeft:4,fontSize:10}}>↗ Click</span>}</div>
+            <div className="an-kpi-icon" style={{background:k.ibg,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{k.icon}</div>
+            <div className="an-kpi-body">
+              <div className="an-kpi-val">{k.val}</div>
+              <div className="an-kpi-label">{k.label}{k.clickable&&<span style={{color:"#ef4444",marginLeft:4,fontSize:10}}>↗ Click</span>}</div>
             </div>
           </div>
         ))}
@@ -227,24 +233,22 @@ export default function Analytics({ customers = [] }) {
       )}
 
       {/* KPI Row 2 — Customers */}
-      {total>0 && (
-        <div className="analytics-kpi-row" style={{display:"grid",gap:12}}>
+      <div className="analytics-kpi-row" style={{display:"grid",gap:12}}>
           {[
             {icon:"👥",val:total,          label:"Total Customers",  bg:"#eff6ff",ibg:"#dbeafe"},
             {icon:"✅",val:done,           label:"Jobs Completed",   bg:"#f0fdf4",ibg:"#dcfce7"},
             {icon:"⏳",val:pending,        label:"Pending Jobs",     bg:"#fffbeb",ibg:"#fef3c7"},
             {icon:"🛡️",val:exp30+expired,  label:"Warranty Issues",  bg:"#fef2f2",ibg:"#fee2e2"},
           ].map((k,i)=>(
-            <div key={i} style={{background:k.bg,borderRadius:14,padding:18,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,0.05)",display:"flex",alignItems:"center",gap:14}}>
-              <div style={{width:48,height:48,borderRadius:12,background:k.ibg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{k.icon}</div>
-              <div>
-                <div style={{fontSize:28,fontWeight:800,color:"#1e293b",lineHeight:1}}>{k.val}</div>
-                <div style={{fontSize:12,color:"#64748b",marginTop:4,fontWeight:500}}>{k.label}</div>
+            <div key={i} className="an-kpi-card" style={{background:k.bg,borderRadius:14,border:"1px solid #e2e8f0",boxShadow:"0 2px 8px rgba(0,0,0,0.05)",display:"flex",alignItems:"center"}}>
+              <div className="an-kpi-icon" style={{background:k.ibg,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{k.icon}</div>
+              <div className="an-kpi-body">
+                <div className="an-kpi-val">{k.val}</div>
+                <div className="an-kpi-label">{k.label}</div>
               </div>
             </div>
           ))}
         </div>
-      )}
 
       {/* Row: Monthly Revenue + Last 7 days */}
       <div className="an-row-2-1" style={{display:"grid",gap:16}}>
@@ -338,8 +342,7 @@ export default function Analytics({ customers = [] }) {
       )}
 
       {/* Row: Machine Types + Top Brands + Warranty */}
-      {total>0 && (
-        <div className="an-row-3" style={{display:"grid",gap:16}}>
+      <div className="an-row-3" style={{display:"grid",gap:16}}>
 
           <Card>
             <Title icon="🔧" title="Machine Types" sub="Kaunsi machine zyada aati hai"/>
@@ -395,11 +398,9 @@ export default function Analytics({ customers = [] }) {
             </div>
           </Card>
         </div>
-      )}
 
       {/* Row: Job Status + Monthly Service Trend */}
-      {total>0 && (
-        <div className="an-row-1-2" style={{display:"grid",gap:16}}>
+      <div className="an-row-1-2" style={{display:"grid",gap:16}}>
 
           <Card>
             <Title icon="🎯" title="Job Status" sub="Completed vs Pending"/>
@@ -447,7 +448,6 @@ export default function Analytics({ customers = [] }) {
             </div>
           </Card>
         </div>
-      )}
 
     </div>
   );
