@@ -61,6 +61,54 @@ export default function TechApp({ user, onLogout }) {
   const [invoice,   setInvoice]   = useState(null);
 
   const [gpsStatus, setGpsStatus] = useState("starting"); // "starting" | "ok" | "error"
+  const [isActive,  setIsActive]  = useState(() => {
+    // Persist active state in localStorage
+    return localStorage.getItem(`tech_active_${user?.id}`) === "true";
+  });
+  const [activeStart, setActiveStart] = useState(() => {
+    const s = localStorage.getItem(`tech_active_start_${user?.id}`);
+    return s ? new Date(s) : null;
+  });
+  const [activeMins, setActiveMins] = useState(0);
+
+  // Count active minutes
+  useEffect(() => {
+    if (!isActive || !activeStart) return;
+    const interval = setInterval(() => {
+      const mins = Math.floor((Date.now() - new Date(activeStart).getTime()) / 60000);
+      setActiveMins(mins);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [isActive, activeStart]);
+
+  const toggleActive = async () => {
+    const newState = !isActive;
+    setIsActive(newState);
+    localStorage.setItem(`tech_active_${user?.id}`, String(newState));
+    if (newState) {
+      const now = new Date().toISOString();
+      localStorage.setItem(`tech_active_start_${user?.id}`, now);
+      setActiveStart(new Date(now));
+      setActiveMins(0);
+      toast("✅ Active ho gaye! GPS tracking shuru", "success");
+    } else {
+      localStorage.removeItem(`tech_active_start_${user?.id}`);
+      setActiveStart(null);
+      setActiveMins(0);
+      // Remove location on going inactive
+      try { await fetch(`${API}/location`, { method:"DELETE", headers:authHeader() }); } catch(e){}
+      toast("⏸️ Inactive ho gaye", "info");
+    }
+    // Sync with backend
+    try {
+      await apiFetch(`${API}/users/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() });
+    } catch(e) {}
+  };
+
+  function fmtActiveMins(mins) {
+    if (mins < 60) return `${mins}m`;
+    return `${Math.floor(mins/60)}h ${mins%60}m`;
+  }
 
   // ── LIVE GPS TRACKING ────────────────────────────────────────────────────
   // Dual mode:
@@ -175,11 +223,13 @@ export default function TechApp({ user, onLogout }) {
     window.addEventListener("online",  onOnline);
     window.addEventListener("offline", onOffline);
 
-    // Start appropriate mode
-    if (isNative) {
-      startNativeGPS();
-    } else {
-      startWebGPS();
+    // Start appropriate mode — only if active
+    if (isActive) {
+      if (isNative) {
+        startNativeGPS();
+      } else {
+        startWebGPS();
+      }
     }
 
     return () => {
@@ -188,7 +238,7 @@ export default function TechApp({ user, onLogout }) {
       window.removeEventListener("online",  onOnline);
       window.removeEventListener("offline", onOffline);
     };
-  }, []);
+  }, [isActive]);
 
   useEffect(() => { loadJobs(); }, []);
 
@@ -378,6 +428,36 @@ export default function TechApp({ user, onLogout }) {
           try { await fetch(`${API}/location`, { method:"DELETE", headers:authHeader() }); } catch(e){}
           onLogout();
         }}>Logout</button>
+      </div>
+
+      {/* ── ACTIVE / INACTIVE TOGGLE ── */}
+      <div style={{ margin:"10px 12px 0", padding:"12px 16px", borderRadius:14,
+        background: isActive ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.06)",
+        border: `1.5px solid ${isActive ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.2)"}`,
+        display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+        <div>
+          <div style={{ fontWeight:800, fontSize:14, color: isActive ? "#065f46" : "#991b1b" }}>
+            {isActive ? "🟢 Active — Kaam Pe Hoon" : "🔴 Inactive — Kaam Pe Nahi"}
+          </div>
+          {isActive && activeStart && (
+            <div style={{ fontSize:11, color:"#6b7280", marginTop:3 }}>
+              ⏱️ Active time: {fmtActiveMins(activeMins)} · GPS on
+            </div>
+          )}
+          {!isActive && (
+            <div style={{ fontSize:11, color:"#9ca3af", marginTop:3 }}>
+              Active karo tab GPS tracking shuru hogi
+            </div>
+          )}
+        </div>
+        <button onClick={toggleActive} style={{
+          padding:"9px 18px", borderRadius:10, border:"none", fontWeight:800, fontSize:13,
+          cursor:"pointer", flexShrink:0,
+          background: isActive ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.15)",
+          color: isActive ? "#ef4444" : "#059669"
+        }}>
+          {isActive ? "⏸️ Inactive" : "▶️ Active"}
+        </button>
       </div>
 
       {/* Live GPS indicator */}

@@ -441,7 +441,7 @@ export default function LiveTracking({ onNavigate }) {
             <div style={{ fontSize:13, color:"#94a3b8", maxWidth:300, textAlign:"center", lineHeight:1.5 }}>
               Technician ka app open hona chahiye aur internet connection hona chahiye
             </div>
-            <button onClick={fetchData} style={{ marginTop:8, padding:"10px 20px", background:"#3b82f6", color:"#fff", border:"none", borderRadius:10, fontWeight:700, cursor:"pointer", fontSize:13 }}>
+            <button onClick={fetchAll} style={{ marginTop:8, padding:"10px 20px", background:"#3b82f6", color:"#fff", border:"none", borderRadius:10, fontWeight:700, cursor:"pointer", fontSize:13 }}>
               🔄 Refresh
             </button>
           </div>

@@ -311,18 +311,11 @@ export default function AddTechnician() {
                   </button>
                 </div>
 
-                {/* Actions */}
+                {/* Actions — only delete */}
                 <div style={{display:"flex",gap:8,padding:"10px 16px",borderTop:"1px solid #f1f5f9"}}>
-                  <button onClick={()=>handleToggle(t.id)}
-                    style={{flex:1,padding:"8px",borderRadius:8,border:"1.5px solid",fontWeight:600,fontSize:12,cursor:"pointer",
-                      borderColor:t.isActive?"#f59e0b":"#10b981",
-                      background:t.isActive?"rgba(245,158,11,0.07)":"rgba(16,185,129,0.07)",
-                      color:t.isActive?"#d97706":"#059669"}}>
-                    {t.isActive?"⏸️ Inactive Karo":"▶️ Active Karo"}
-                  </button>
                   <button onClick={()=>handleDelete(t.id,t.name)}
-                    style={{padding:"8px 12px",borderRadius:8,border:"1.5px solid rgba(239,68,68,0.2)",background:"rgba(239,68,68,0.06)",color:"#ef4444",fontWeight:600,fontSize:12,cursor:"pointer"}}>
-                    🗑️
+                    style={{flex:1,padding:"8px 12px",borderRadius:8,border:"1.5px solid rgba(239,68,68,0.2)",background:"rgba(239,68,68,0.06)",color:"#ef4444",fontWeight:600,fontSize:12,cursor:"pointer"}}>
+                    🗑️ Technician Hatao
                   </button>
                 </div>
               </div>
