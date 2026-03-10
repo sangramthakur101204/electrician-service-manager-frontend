@@ -972,6 +972,14 @@ tbody tr:last-child td { border-bottom: none; }
   .odash-stats-grid { grid-template-columns:repeat(2,1fr) !important; gap:8px !important; }
   .odash-section { min-width:0 !important; width:100% !important; overflow-x:hidden !important; }
   .odash-graph { overflow-x:auto !important; }
+  /* Fix card overflow on mobile */
+  .odash-card { padding:12px 10px !important; gap:8px !important; min-width:0 !important; overflow:hidden !important; }
+  .odash-card-icon { width:36px !important; height:36px !important; font-size:16px !important; flex-shrink:0 !important; }
+  .odash-card-value { font-size:18px !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+  .odash-card-label { font-size:10px !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+  .odash-card-body { min-width:0 !important; overflow:hidden !important; flex:1 !important; }
+  /* Hide badge text on small mobile to save space */
+  .odash-card [style*="position:absolute"] { display:none !important; }
 }
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns:1fr 1fr; }
