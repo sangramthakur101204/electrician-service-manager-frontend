@@ -460,8 +460,6 @@ export default function TechApp({ user, onLogout }) {
         </button>
       </div>
 
-      {/* Live GPS indicator */}
-      {(() => {
       <div className="tech-mob-stats">
         <Stat num={jobs.length}          label="Active" />
         <div className="tech-mob-stat-divider"/>
