@@ -162,7 +162,9 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
     if (val.trim().length < 3) return;
     debounceRef.current = setTimeout(async () => {
       setGeocoding(true);
-      const results = await searchAddress(val + ", India");
+      // City naam already ho toh as-is, warna local context add karo
+      const query = val.toLowerCase().includes("aurangabad") ? val : val + ", Aurangabad, Maharashtra, India";
+      const results = await searchAddress(query);
       setSuggestions(results.slice(0, 5));
       setShowSug(results.length > 0);
       setGeocoding(false);
@@ -184,11 +186,14 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
   async function doSearch() {
     if (!searchQ.trim()) return;
     setGeocoding(true); setShowSug(false);
-    const results = await searchAddress(searchQ + ", India");
+    const query = searchQ.toLowerCase().includes("aurangabad") ? searchQ : searchQ + ", Aurangabad, Maharashtra, India";
+    const results = await searchAddress(query);
     if (results.length) {
-      pickSuggestion(results[0]);
+      // Sirf suggestions dikhao — auto pick mat karo, user khud select kare
+      setSuggestions(results.slice(0, 5));
+      setShowSug(true);
     } else {
-      // Location nahi mili — typed text ko hi address save karo
+      // Koi result nahi mila — typed text as-is save karo
       setAddr(searchQ.trim());
       setPinPlaced(false);
       setShowManual(true);
@@ -297,8 +302,7 @@ export default function LocationPicker({ address, latitude, longitude, onLocatio
 
         {/* Tip */}
         <div style={{ flexShrink:0, padding:"6px 14px", background:"rgba(59,130,246,0.05)", borderBottom:"1px solid rgba(59,130,246,0.1)", fontSize:11, color:"#3b82f6", fontWeight:600 }}>
-          💡 Tip: City ka naam bhi likho — jaise <b>"Bharat Nagar, Aurangabad"</b> — zyada accurate milega
-        </div>
+          💡 Tip: Sirf mohalla/gali likho — Aurangabad automatically add ho jaata hai. List mein se select karo pin set hoga.</div>
 
         {/* Map */}
         <div style={{ flex:1, minHeight:0 }}>
