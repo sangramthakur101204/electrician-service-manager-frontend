@@ -273,7 +273,7 @@ export default function JobAssign() {
       {showForm && (
         <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.6)", display:"flex", alignItems: isMob ? "flex-end" : "center", justifyContent:"center", zIndex:9999 }}
           onClick={e => { if(e.target===e.currentTarget){setShowForm(false);resetForm();} }}
-          onTouchMove={e => e.preventDefault()}>
+          /* touch handled by inner div */>
           <div style={{ background:"#fff", borderRadius: isMob ? "20px 20px 0 0" : 16, width:"100%", maxWidth: isMob ? "100%" : 620, height: isMob ? "93vh" : "86vh", display:"flex", flexDirection:"column", overflow:"hidden", boxShadow:"0 -4px 40px rgba(0,0,0,0.2)" }}>
 
             {/* Modal header — fixed at top */}
