@@ -8,6 +8,7 @@ import {
 import { generateWarrantyCard } from "./WarrantyCard";
 import InvoiceModal from "./InvoiceGenerator";
 import { useToast } from "./Toast.jsx";
+import CustomerHistory from "./CustomerHistory";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -33,11 +34,12 @@ export default function CustomerList({ customers, onRefresh }) {
   const [sortField,     setSortField]    = useState("id");
   const [sortDir,       setSortDir]      = useState("desc");
   const [detailId,      setDetailId]     = useState(null);
-  const [invoiceCustomer, setInvoiceCustomer] = useState(null); // NEW invoice (InvoiceGenerator)
-  const [custInvModal,  setCustInvModal] = useState(null);      // VIEW invoices modal
+  const [invoiceCustomer, setInvoiceCustomer] = useState(null);
+  const [custInvModal,  setCustInvModal] = useState(null);
   const [custInvList,   setCustInvList]  = useState([]);
   const [custInvLoad,   setCustInvLoad]  = useState(false);
   const [exporting,     setExporting]    = useState(false);
+  const [historyCustomer, setHistoryCustomer] = useState(null); // NEW
 
   // ── Export CSV/Excel ──────────────────────────────────────────
   const exportExcel = async () => {
@@ -235,6 +237,17 @@ export default function CustomerList({ customers, onRefresh }) {
 
   const detailCustomer = customers.find(c => c.id === detailId);
 
+  // Show CustomerHistory page if selected
+  if (historyCustomer) {
+    return (
+      <CustomerHistory
+        customer={historyCustomer}
+        onBack={() => setHistoryCustomer(null)}
+        onRefresh={onRefresh}
+      />
+    );
+  }
+
   return (
     <div className="customer-list">
 
@@ -362,6 +375,14 @@ export default function CustomerList({ customers, onRefresh }) {
 
                       {/* Edit — hamesha */}
                       <button className="act-btn act-blue" onClick={() => openEdit(c)} title="Edit">✏️</button>
+
+                      {/* History — hamesha — customer history page */}
+                      <button className="act-btn" onClick={() => setHistoryCustomer(c)}
+                        title="Customer History"
+                        style={{ background:"rgba(139,92,246,0.1)", color:"#7c3aed", border:"none",
+                          borderRadius:8, padding:"5px 8px", cursor:"pointer", fontSize:14 }}>
+                        📋
+                      </button>
 
                       {/* Map — hamesha */}
                       <button className="act-btn act-map" onClick={() => openMap(c)} title="Map Kholo">🗺️</button>

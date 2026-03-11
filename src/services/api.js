@@ -98,8 +98,59 @@ export const addCustomer = async (customer) => {
   const res = await apiFetch(BASE_URL, {
     method: "POST", headers: authHeader(), body: JSON.stringify(customer),
   });
-  if (!res.ok) throw new Error("Failed to add");
+  const data = await res.json();
+  if (res.status === 409) {
+    // Duplicate mobile — return special error with existing customer info
+    const err = new Error(data.message || "Duplicate mobile");
+    err.isDuplicate = true;
+    err.existingId   = data.existingId;
+    err.existingName = data.existingName;
+    throw err;
+  }
+  if (!res.ok) throw new Error(data.message || "Failed to add");
+  return data;
+};
+
+// ── CustomerMachine APIs ──────────────────────────────────────────────────────
+export const getCustomerMachines = async (customerId) => {
+  const res = await apiFetch(`${BASE_URL}/${customerId}/machines`, { headers: authHeader() });
+  if (!res.ok) return [];
   return res.json();
+};
+
+export const addCustomerMachine = async (customerId, machine) => {
+  const res = await apiFetch(`${BASE_URL}/${customerId}/machines`, {
+    method: "POST", headers: authHeader(), body: JSON.stringify(machine),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Machine add failed");
+  return data;
+};
+
+export const updateCustomerMachine = async (customerId, machineId, machine) => {
+  const res = await apiFetch(`${BASE_URL}/${customerId}/machines/${machineId}`, {
+    method: "PUT", headers: authHeader(), body: JSON.stringify(machine),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Machine update failed");
+  return data;
+};
+
+export const deleteCustomerMachine = async (customerId, machineId) => {
+  const res = await apiFetch(`${BASE_URL}/${customerId}/machines/${machineId}`, {
+    method: "DELETE", headers: authHeader(),
+  });
+  if (!res.ok) throw new Error("Machine delete failed");
+};
+
+// ── Customer Jobs (service history) ──────────────────────────────────────────
+export const getCustomerJobs = async (customerId) => {
+  const res = await apiFetch(`${API}/jobs`, { headers: authHeader() });
+  if (!res.ok) return [];
+  const jobs = await res.json();
+  return Array.isArray(jobs)
+    ? jobs.filter(j => j.customer?.id === customerId).sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0))
+    : [];
 };
 
 export const updateCustomer = async (id, customer) => {
