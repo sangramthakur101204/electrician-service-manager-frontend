@@ -181,12 +181,17 @@ export default function JobAssign() {
       fetchAll();
       toast("✅ Technician assign ho gaya!", "success");
 
-      // Google Maps redirect — job location pe navigate karo
+      // Google Maps redirect — lat/lng ho toh navigate, warna address text se search
       const job = data.job || data;
       const jLat = job?.latitude || job?.customerLatitude;
       const jLng = job?.longitude || job?.customerLongitude;
+      const jAddr = job?.customerAddress || job?.customer?.address;
       if (jLat && jLng) {
         const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${jLat},${jLng}&travelmode=driving`;
+        setMapsRedirectUrl(mapsUrl);
+        setShowMapsPopup(true);
+      } else if (jAddr && jAddr.trim()) {
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(jAddr)}`;
         setMapsRedirectUrl(mapsUrl);
         setShowMapsPopup(true);
       }
@@ -498,80 +503,124 @@ export default function JobAssign() {
               {/* ── TECHNICIAN ── */}
               <Section title="👷 Technician Assign Karo">
                 {(() => {
-                  // Only show FREE technicians (no active non-DONE/CANCELLED jobs)
-                  const freeTechsInForm = technicians.filter(t => {
-                    if (!t.isActive) return false;
-                    return !jobs.some(j =>
-                      j.technician?.id === t.id &&
-                      !["DONE","CANCELLED"].includes(j.status)
-                    );
-                  });
-
-                  // If location set, sort by nearest among free techs
-                  const displayTechs = form.latitude && nearestTechs.length > 0
-                    ? nearestTechs.filter(t => freeTechsInForm.some(f => f.id === t.id))
-                    : freeTechsInForm.map(t => ({...t, dist:null, hasLoc:false}));
-
-                  if (technicians.filter(t => t.isActive).length === 0) {
-                    return <div style={{ padding:"14px", background:"#fef2f2", borderRadius:10, color:"#ef4444", fontSize:13 }}>Koi active technician nahi hai</div>;
+                  const activeTechs = technicians.filter(t => t.isActive);
+                  if (activeTechs.length === 0) {
+                    return <div style={{ padding:"14px", background:"#fef2f2", borderRadius:10, color:"#ef4444", fontSize:13 }}>Koi active technician nahi hai — pehle technician add karo</div>;
                   }
-                  if (freeTechsInForm.length === 0) {
-                    return (
-                      <div style={{ padding:"16px", background:"rgba(245,158,11,0.07)", border:"1.5px solid rgba(245,158,11,0.3)", borderRadius:12, display:"flex", alignItems:"flex-start", gap:12 }}>
-                        <div style={{fontSize:24,flexShrink:0}}>⏳</div>
-                        <div>
-                          <div style={{fontWeight:700,fontSize:13,color:"#92400e",marginBottom:3}}>Abhi koi free technician nahi hai</div>
-                          <div style={{fontSize:12,color:"#b45309"}}>Sab technicians kisi job par busy hain. Job <strong>PENDING</strong> mein save hogi — jab koi free hoga tab assign kar sakte hain.</div>
-                        </div>
-                      </div>
-                    );
-                  }
+
+                  // Free = no active (non-DONE/CANCELLED) job
+                  const isTechBusy = (t) => jobs.some(j =>
+                    j.technician?.id === t.id && !["DONE","CANCELLED"].includes(j.status)
+                  );
+                  const getActivJob = (t) => jobs.find(j =>
+                    j.technician?.id === t.id && !["DONE","CANCELLED"].includes(j.status)
+                  );
+
+                  const freeTechs = activeTechs.filter(t => !isTechBusy(t));
+                  const busyTechs = activeTechs.filter(t => isTechBusy(t));
+
+                  // Sort free techs by distance if location set
+                  const sortedFree = form.latitude && nearestTechs.length > 0
+                    ? nearestTechs.filter(t => freeTechs.some(f => f.id === t.id))
+                    : freeTechs.map(t => ({...t, dist:null, hasLoc:false}));
+
+                  const allDisplay = [
+                    ...sortedFree,
+                    ...busyTechs.map(t => ({...t, dist:null, hasLoc:false}))
+                  ];
+
                   return (
                     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                      {form.latitude && displayTechs.some(t=>t.hasLoc) && (
-                        <div style={{padding:"8px 12px",background:"rgba(59,130,246,0.07)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:10,fontSize:12,color:"#3b82f6",fontWeight:600,marginBottom:4,display:"flex",alignItems:"center",gap:6}}>
-                          📍 Job location ke hisaab se sorted — sabse paas wala pehle
-                        </div>
-                      )}
-                      <div style={{padding:"6px 10px",background:"rgba(16,185,129,0.07)",border:"1px solid rgba(16,185,129,0.2)",borderRadius:8,fontSize:11,color:"#065f46",fontWeight:600,marginBottom:2}}>
-                        ✅ {freeTechsInForm.length} free technician{freeTechsInForm.length > 1 ? "s" : ""} available (busy wale nahi dikh rahe)
+                      {/* Summary bar */}
+                      <div style={{display:"flex",gap:8,marginBottom:2}}>
+                        {freeTechs.length > 0 && (
+                          <div style={{padding:"5px 10px",background:"rgba(16,185,129,0.08)",border:"1px solid rgba(16,185,129,0.2)",borderRadius:8,fontSize:11,color:"#065f46",fontWeight:700}}>
+                            ✅ {freeTechs.length} Free
+                          </div>
+                        )}
+                        {busyTechs.length > 0 && (
+                          <div style={{padding:"5px 10px",background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.2)",borderRadius:8,fontSize:11,color:"#92400e",fontWeight:700}}>
+                            ⏳ {busyTechs.length} Busy
+                          </div>
+                        )}
+                        {form.latitude && sortedFree.some(t=>t.hasLoc) && (
+                          <div style={{padding:"5px 10px",background:"rgba(59,130,246,0.07)",border:"1px solid rgba(59,130,246,0.2)",borderRadius:8,fontSize:11,color:"#3b82f6",fontWeight:700}}>
+                            📍 Distance sorted
+                          </div>
+                        )}
                       </div>
-                      {displayTechs.map((t,idx) => {
-                        const color = techColor(t.name);
+
+                      {allDisplay.map((t, idx) => {
+                        const busy      = isTechBusy(t);
+                        const activeJob = busy ? getActivJob(t) : null;
+                        const color     = techColor(t.name);
                         const isSelected = form.technicianId == t.id;
-                        const isNearest = idx===0 && t.hasLoc;
+                        const isNearest = !busy && idx===0 && t.hasLoc;
+                        const borderColor = isSelected ? "#3b82f6" : busy ? "#f59e0b" : isNearest ? "#10b981" : "#e2e8f0";
+                        const bgColor = isSelected ? "rgba(59,130,246,0.06)" : busy ? "rgba(245,158,11,0.03)" : isNearest ? "rgba(16,185,129,0.04)" : "#fff";
+
                         return (
                           <div key={t.id} onClick={() => set("technicianId", isSelected ? "" : t.id)}
                             style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px",
                               borderRadius:12, cursor:"pointer",
-                              border: isSelected ? `2px solid #3b82f6` : isNearest ? `2px solid #10b981` : "2px solid #e2e8f0",
-                              background: isSelected ? "rgba(59,130,246,0.06)" : isNearest ? "rgba(16,185,129,0.04)" : "#fff",
-                              transition:"all 0.15s", position:"relative" }}>
-                            {isNearest && (
+                              border: `2px solid ${borderColor}`,
+                              background: bgColor,
+                              transition:"all 0.15s", position:"relative",
+                              opacity: busy && !isSelected ? 0.85 : 1 }}>
+
+                            {isNearest && !busy && (
                               <div style={{position:"absolute",top:-8,left:12,padding:"2px 8px",background:"#10b981",color:"#fff",borderRadius:6,fontSize:10,fontWeight:700}}>
                                 ⭐ Sabse Paas
                               </div>
                             )}
-                            <div style={{ width:42,height:42,borderRadius:"50%",background:`linear-gradient(135deg,${color},${color}bb)`,color:"#fff",fontWeight:800,fontSize:17,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 2px 8px ${color}40` }}>
+                            {busy && (
+                              <div style={{position:"absolute",top:-8,left:12,padding:"2px 8px",background:"#f59e0b",color:"#fff",borderRadius:6,fontSize:10,fontWeight:700}}>
+                                ⏳ Busy hai
+                              </div>
+                            )}
+
+                            <div style={{ width:42,height:42,borderRadius:"50%",
+                              background:`linear-gradient(135deg,${busy?"#f59e0b":color},${busy?"#d97706":color}bb)`,
+                              color:"#fff",fontWeight:800,fontSize:17,
+                              display:"flex",alignItems:"center",justifyContent:"center",
+                              flexShrink:0,boxShadow:`0 2px 8px ${busy?"#f59e0b40":color+"40"}` }}>
                               {t.name?.[0]?.toUpperCase()}
                             </div>
+
                             <div style={{flex:1,minWidth:0}}>
                               <div style={{fontWeight:700,fontSize:14,color:"#1e293b"}}>{t.name}</div>
-                              <div style={{fontSize:11,color:"#10b981",marginTop:1,fontWeight:600}}>✅ Free hai · 📞 {t.mobile}</div>
+                              {busy && activeJob ? (
+                                <div style={{fontSize:11,color:"#92400e",marginTop:1,fontWeight:600}}>
+                                  🔧 {activeJob.customer?.name || activeJob.customerName || "Job"} · {activeJob.status?.replace(/_/g," ")}
+                                </div>
+                              ) : (
+                                <div style={{fontSize:11,color:"#10b981",marginTop:1,fontWeight:600}}>✅ Free hai · 📞 {t.mobile}</div>
+                              )}
+                              {busy && (
+                                <div style={{fontSize:10,color:"#b45309",marginTop:2}}>
+                                  ⚠️ Pehle wali job complete hone ke baad assign hoga
+                                </div>
+                              )}
                             </div>
-                            {t.hasLoc ? (
+
+                            {!busy && t.hasLoc && (
                               <div style={{textAlign:"right",flexShrink:0}}>
                                 <div style={{fontWeight:800,fontSize:15,color:isNearest?"#059669":"#3b82f6"}}>{t.dist.toFixed(1)} km</div>
                                 <div style={{fontSize:10,color:"#94a3b8",marginTop:1}}>door hai</div>
                               </div>
-                            ) : (
+                            )}
+                            {!busy && !t.hasLoc && (
                               <div style={{fontSize:10,color:"#94a3b8",textAlign:"right",flexShrink:0}}>
                                 📡 Location<br/>unknown
                               </div>
                             )}
-                            {isSelected && (
-                              <div style={{width:22,height:22,borderRadius:"50%",background:"#3b82f6",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,flexShrink:0}}>✓</div>
-                            )}
+
+                            <div style={{width:22,height:22,borderRadius:"50%",flexShrink:0,
+                              background: isSelected ? "#3b82f6" : busy ? "rgba(245,158,11,0.15)" : "#f1f5f9",
+                              color: isSelected ? "#fff" : busy ? "#92400e" : "#94a3b8",
+                              display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800}}>
+                              {isSelected ? "✓" : busy ? "!" : ""}
+                            </div>
                           </div>
                         );
                       })}

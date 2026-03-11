@@ -5,45 +5,53 @@ import { getLiveLocations, authHeader, apiFetch } from "../../services/api";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
 const DEFAULT_CENTER = [19.8762, 75.3433];
-
-// CartoDB Voyager — much better looking map
 const TILE_URL  = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 const TILE_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>';
 
-// Status → label, color, emoji
 const STATUS_META = {
-  FREE:        { label:"Available",  color:"#10b981", bg:"rgba(16,185,129,0.12)",  emoji:"🟢" },
-  ASSIGNED:    { label:"On Job",     color:"#f59e0b", bg:"rgba(245,158,11,0.12)",   emoji:"🟡" },
-  ON_THE_WAY:  { label:"On The Way", color:"#f59e0b", bg:"rgba(245,158,11,0.12)",   emoji:"🟡" },
-  IN_PROGRESS: { label:"Busy",       color:"#ef4444", bg:"rgba(239,68,68,0.12)",    emoji:"🔴" },
-  OFFLINE:     { label:"Offline",    color:"#6b7280", bg:"rgba(107,114,128,0.12)", emoji:"⚫" },
+  FREE:        { label:"Available",   color:"#10b981", bg:"rgba(16,185,129,0.12)", emoji:"🟢" },
+  ASSIGNED:    { label:"On Job",      color:"#f59e0b", bg:"rgba(245,158,11,0.12)",  emoji:"🟡" },
+  ON_THE_WAY:  { label:"On The Way",  color:"#3b82f6", bg:"rgba(59,130,246,0.12)",  emoji:"🔵" },
+  IN_PROGRESS: { label:"In Progress", color:"#8b5cf6", bg:"rgba(139,92,246,0.12)",  emoji:"🟣" },
+  OFFLINE:     { label:"Offline",     color:"#94a3b8", bg:"rgba(148,163,184,0.12)", emoji:"⚫" },
 };
 
-function getMeta(status) { return STATUS_META[status] || STATUS_META.OFFLINE; }
-function distKm(lat1,lng1,lat2,lng2) {
-  const R=6371,dL=(lat2-lat1)*Math.PI/180,dG=(lng2-lng1)*Math.PI/180;
-  const a=Math.sin(dL/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dG/2)**2;
+function getMeta(s) { return STATUS_META[s] || STATUS_META.OFFLINE; }
+function distKm(la1,lo1,la2,lo2) {
+  const R=6371,dL=(la2-la1)*Math.PI/180,dG=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dG/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function timeAgo(ts) {
+  if (!ts) return null;
+  const mins = Math.round((Date.now() - new Date(ts)) / 60000);
+  if (mins < 1) return { text:"Abhi abhi", stale:false };
+  if (mins < 60) return { text:`${mins}m pehle`, stale: mins > 10 };
+  return { text:`${Math.round(mins/60)}h pehle`, stale:true };
 }
 
 export default function LiveTracking({ onNavigate }) {
-  const toast = useToast();
-  const [locs,     setLocs]     = useState([]);
-  const [jobs,     setJobs]     = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [lastSync, setLastSync] = useState(null);
-  const [filter,   setFilter]   = useState("ALL");
-  const [mapReady, setMapReady] = useState(false);
-  const [selTech,  setSelTech]  = useState(null); // selected tech for panel
+  const [locs,    setLocs]    = useState([]);
+  const [jobs,    setJobs]    = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [lastSync,setLastSync]= useState(null);
+  const [filter,  setFilter]  = useState("ALL");
+  const [selId,   setSelId]   = useState(null);
+  const [mapReady,setMapReady]= useState(false);
+  const isMob = window.innerWidth < 768;
 
   const mapRef      = useRef(null);
   const leafMap     = useRef(null);
   const techMarkers = useRef({});
   const routeLines  = useRef({});
 
-  useEffect(() => { fetchAll(); const t = setInterval(fetchAll, 30000); return () => clearInterval(t); }, []);
+  useEffect(() => {
+    fetchAll();
+    const t = setInterval(fetchAll, 30000);
+    return () => clearInterval(t);
+  }, []);
   useEffect(() => { if (!loading) loadLeaflet(); }, [loading]);
-  useEffect(() => { if (mapReady) updateMarkers(); }, [locs, jobs, mapReady, filter]);
+  useEffect(() => { if (mapReady) updateMarkers(); }, [locs, jobs, mapReady, filter, selId]);
 
   async function fetchAll() {
     try {
@@ -75,410 +83,393 @@ export default function LiveTracking({ onNavigate }) {
       document.head.appendChild(l);
     }
     if (!window.L) {
-      await new Promise((res,rej) => {
+      await new Promise((res, rej) => {
         const s = document.createElement("script");
         s.src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
         s.onload=res; s.onerror=rej;
         document.head.appendChild(s);
       });
     }
-    const L = window.L;
     if (!leafMap.current) {
       const center = locs.length > 0 ? [locs[0].latitude, locs[0].longitude] : DEFAULT_CENTER;
-      leafMap.current = L.map(mapRef.current, { zoomControl: true, preferCanvas: true });
+      leafMap.current = window.L.map(mapRef.current, { zoomControl:true, preferCanvas:true });
       leafMap.current.setView(center, 13);
-      L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19 }).addTo(leafMap.current);
+      window.L.tileLayer(TILE_URL, { attribution:TILE_ATTR, maxZoom:19 }).addTo(leafMap.current);
     }
     setMapReady(true);
   }
 
-  // ── New marker: card-style DivIcon ──────────────────────────────────────────
-  function makeTechDivIcon(loc, status) {
+  function makeTechIcon(loc, status, isSelected) {
     const m    = getMeta(status);
     const init = (loc.name || "T")[0].toUpperCase();
-    // Card marker: avatar + name + status badge, with triangle pointer at bottom
+    const w    = isSelected ? 94 : 82;
     const html = `
-      <div style="
-        font-family:Arial,sans-serif;
-        background:#fff;
-        border:2px solid ${m.color};
-        border-radius:12px;
-        padding:7px 10px 6px;
-        box-shadow:0 4px 16px ${m.color}40, 0 2px 6px rgba(0,0,0,0.12);
-        text-align:center;
-        min-width:72px;
-        position:relative;
-        cursor:pointer;
-      ">
-        <!-- Avatar circle -->
-        <div style="
-          width:36px;height:36px;border-radius:50%;
-          background:linear-gradient(135deg,${m.color},${m.color}bb);
-          color:#fff;font-weight:900;font-size:16px;
-          display:flex;align-items:center;justify-content:center;
-          margin:0 auto 4px;
-          box-shadow:0 2px 8px ${m.color}60;
-        ">${init}</div>
-        <!-- Name -->
-        <div style="font-weight:800;font-size:11px;color:#1e293b;white-space:nowrap;overflow:hidden;max-width:70px;text-overflow:ellipsis;">${loc.name}</div>
-        <!-- Status badge -->
-        <div style="
-          display:inline-block;
-          margin-top:3px;
-          padding:2px 7px;border-radius:20px;
-          background:${m.bg};
-          color:${m.color};
-          font-size:10px;font-weight:700;
-          white-space:nowrap;
-        ">${m.emoji} ${m.label}</div>
-        <!-- Triangle pointer -->
-        <div style="
-          position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);
-          width:0;height:0;
-          border-left:7px solid transparent;
-          border-right:7px solid transparent;
-          border-top:8px solid ${m.color};
-        "></div>
+      <div style="font-family:system-ui,sans-serif;position:relative;width:${w}px;cursor:pointer;">
+        <div style="background:#fff;border:${isSelected?"3px":"2px"} solid ${m.color};
+          border-radius:14px;padding:6px 8px 5px;text-align:center;
+          box-shadow:0 ${isSelected?"8px 24px":"4px 14px"} ${m.color}${isSelected?"50":"28"},0 2px 6px rgba(0,0,0,0.1);
+          transform:${isSelected?"scale(1.06)":"scale(1)"};transition:all 0.2s;">
+          <div style="width:30px;height:30px;border-radius:50%;margin:0 auto 3px;
+            background:linear-gradient(135deg,${m.color},${m.color}aa);
+            color:#fff;font-weight:900;font-size:13px;
+            display:flex;align-items:center;justify-content:center;">${init}</div>
+          <div style="font-size:10px;font-weight:800;color:#1e293b;
+            white-space:nowrap;overflow:hidden;max-width:70px;text-overflow:ellipsis;">${loc.name}</div>
+          <div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:20px;
+            background:${m.bg};color:${m.color};font-size:9px;font-weight:700;white-space:nowrap;">
+            ${m.emoji} ${m.label}</div>
+        </div>
+        <div style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);
+          width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;
+          border-top:7px solid ${m.color};"></div>
       </div>`;
-    return window.L.divIcon({
-      html,
-      className: "",
-      iconSize: [88, 76],
-      iconAnchor: [44, 84],
-      popupAnchor: [0, -88],
-    });
+    return window.L.divIcon({ html, className:"", iconSize:[w, 80], iconAnchor:[w/2, 87], popupAnchor:[0,-92] });
   }
 
   function updateMarkers() {
-    const L   = window.L;
-    const map = leafMap.current;
+    const L = window.L, map = leafMap.current;
     if (!L || !map) return;
 
-    // Determine which locs to show
-    const displayLocs = filter === "ALL" ? locs : locs.filter(l => {
+    const displayLocs = filter==="ALL" ? locs : locs.filter(l => {
       const s = techStatus(l);
-      if (filter === "FREE") return s === "FREE";
-      return s === filter;
+      return filter==="FREE" ? s==="FREE" : s===filter;
     });
 
     const seen = new Set();
-
     displayLocs.forEach(loc => {
-      const id      = loc.techId;
-      const status  = techStatus(loc);
-      const m       = getMeta(status);
-      const activeJob = techActiveJob(id);
-      const mins    = loc.updatedAt ? Math.round((Date.now() - new Date(loc.updatedAt)) / 60000) : null;
+      const id = loc.techId, status = techStatus(loc);
+      const m = getMeta(status), activeJob = techActiveJob(id);
+      const isSelected = selId===id;
       seen.add(id);
 
-      // Popup HTML — rich design
-      const custName = activeJob ? (activeJob.customer?.name || activeJob.customerName || "—") : null;
-      const custMobile = activeJob ? (activeJob.customer?.mobile || activeJob.customerMobile || null) : null;
-      const jobDist = (activeJob?.latitude && activeJob?.longitude)
-        ? distKm(loc.latitude, loc.longitude, parseFloat(activeJob.latitude), parseFloat(activeJob.longitude)).toFixed(1)
-        : null;
+      const custName = activeJob ? (activeJob.customer?.name||activeJob.customerName||"—") : null;
+      const jobDist  = (activeJob?.latitude&&activeJob?.longitude)
+        ? distKm(loc.latitude,loc.longitude,parseFloat(activeJob.latitude),parseFloat(activeJob.longitude)).toFixed(1) : null;
+      const ago = timeAgo(loc.updatedAt);
 
-      const popupHtml = `
-        <div style="font-family:Arial,sans-serif;min-width:200px;font-size:13px;padding:4px 2px;">
-          <!-- Header -->
-          <div style="display:flex;align-items:center;gap:10;margin-bottom:10px;">
-            <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,${m.color},${m.color}bb);
-              color:#fff;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;
-              flex-shrink:0;box-shadow:0 2px 8px ${m.color}40;">${(loc.name||"T")[0].toUpperCase()}</div>
+      const popHtml = `
+        <div style="font-family:system-ui,sans-serif;min-width:205px;max-width:235px;padding:2px;">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px;">
+            <div style="width:40px;height:40px;border-radius:50%;flex-shrink:0;
+              background:linear-gradient(135deg,${m.color},${m.color}aa);
+              color:#fff;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;">
+              ${(loc.name||"T")[0].toUpperCase()}</div>
             <div>
-              <div style="font-weight:800;font-size:15px;color:#1e293b;">${loc.name}</div>
-              <div style="display:inline-block;padding:2px 9px;border-radius:20px;background:${m.bg};
-                color:${m.color};font-size:11px;font-weight:700;margin-top:2px;">
-                ${m.emoji} ${m.label}
-              </div>
+              <div style="font-weight:800;font-size:14px;color:#0f172a;">${loc.name}</div>
+              <span style="padding:2px 8px;border-radius:20px;background:${m.bg};color:${m.color};font-size:10px;font-weight:700;">
+                ${m.emoji} ${m.label}</span>
             </div>
           </div>
-          <!-- Job info -->
-          ${custName ? `
-          <div style="background:#f8fafc;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px;">
-            <div style="font-weight:700;color:#374151;margin-bottom:2px;">🔧 Current Job</div>
-            <div style="color:#1e293b;font-weight:600;">${custName}</div>
-            ${activeJob?.problemDescription ? `<div style="color:#64748b;margin-top:2px;">${(activeJob.problemDescription||"").substring(0,40)}...</div>` : ""}
-            ${jobDist ? `<div style="color:#3b82f6;font-weight:600;margin-top:4px;">📏 ${jobDist} km door</div>` : ""}
-          </div>` : ""}
-          <!-- Last seen -->
-          ${mins !== null ? `<div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">🕐 ${mins < 1 ? "Abhi abhi" : mins + " min pehle"}</div>` : ""}
-          <!-- Call button -->
-          <a href="tel:${loc.mobile}" style="
-            display:block;text-align:center;
-            padding:9px;border-radius:9px;
-            background:linear-gradient(135deg,#10b981,#059669);
-            color:#fff;font-weight:700;font-size:13px;
-            text-decoration:none;
-          ">📞 Call ${loc.name}</a>
+          ${custName?`<div style="background:#f8fafc;border-radius:9px;padding:8px 10px;margin-bottom:8px;border-left:3px solid ${m.color};">
+            <div style="font-size:11px;font-weight:700;color:#1e293b;">${custName}</div>
+            ${activeJob?.machineType?`<div style="font-size:10px;color:#64748b;margin-top:1px;">🖥️ ${activeJob.machineType} ${activeJob.machineBrand||""}</div>`:""}
+            ${jobDist?`<div style="font-size:11px;color:${m.color};font-weight:700;margin-top:3px;">📏 ${jobDist} km door</div>`:""}
+          </div>`:""}
+          ${ago?`<div style="font-size:11px;color:${ago.stale?"#f59e0b":"#94a3b8"};font-weight:${ago.stale?700:400};margin-bottom:8px;">🕐 ${ago.text}${ago.stale?" ⚠️":""}</div>`:""}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <a href="tel:${loc.mobile}" style="text-align:center;padding:8px;border-radius:8px;
+              background:rgba(16,185,129,0.1);color:#059669;font-weight:700;font-size:12px;text-decoration:none;">📞 Call</a>
+            <a href="https://maps.google.com?q=${loc.latitude},${loc.longitude}" target="_blank" rel="noreferrer"
+              style="text-align:center;padding:8px;border-radius:8px;
+              background:rgba(59,130,246,0.1);color:#2563eb;font-weight:700;font-size:12px;text-decoration:none;">🗺️ Maps</a>
+          </div>
         </div>`;
 
       if (techMarkers.current[id]) {
-        techMarkers.current[id].setLatLng([loc.latitude, loc.longitude]);
-        techMarkers.current[id].setIcon(makeTechDivIcon(loc, status));
-        techMarkers.current[id].getPopup()?.setContent(popupHtml);
+        techMarkers.current[id].setLatLng([loc.latitude,loc.longitude]);
+        techMarkers.current[id].setIcon(makeTechIcon(loc,status,isSelected));
+        techMarkers.current[id].getPopup()?.setContent(popHtml);
       } else {
-        techMarkers.current[id] = L.marker([loc.latitude, loc.longitude], { icon: makeTechDivIcon(loc, status) })
-          .addTo(map)
-          .bindPopup(popupHtml, { maxWidth: 240 });
+        techMarkers.current[id] = L.marker([loc.latitude,loc.longitude], { icon:makeTechIcon(loc,status,isSelected) })
+          .addTo(map).bindPopup(popHtml, { maxWidth:255 });
+        techMarkers.current[id].on("click", () => setSelId(id));
       }
 
-      // ── Draw route line for technicians with active job that has lat/lng ──
-      if (routeLines.current[id]) {
-        map.removeLayer(routeLines.current[id]);
-        routeLines.current[id] = null;
-      }
-      if (activeJob?.latitude && activeJob?.longitude && status !== "FREE") {
-        const jobLat = parseFloat(activeJob.latitude);
-        const jobLng = parseFloat(activeJob.longitude);
-
-        // Animated dashed route — Google Maps navigation style
-        const routeGroup = L.layerGroup();
-
-        // Shadow line
-        L.polyline(
-          [[loc.latitude, loc.longitude], [jobLat, jobLng]],
-          { color: "#000", weight: 6, opacity: 0.1 }
-        ).addTo(routeGroup);
-
-        // Main colored route
-        L.polyline(
-          [[loc.latitude, loc.longitude], [jobLat, jobLng]],
-          { color: m.color, weight: 4, opacity: 0.85, dashArray: "12,8", lineCap: "round", lineJoin: "round" }
-        ).addTo(routeGroup);
-
-        // Job destination marker
-        const destSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="38" viewBox="0 0 28 38">
-          <defs><radialGradient id="dg" cx="38%" cy="35%" r="60%">
-            <stop offset="0%" stop-color="${m.color}cc"/>
-            <stop offset="100%" stop-color="${m.color}"/>
-          </radialGradient></defs>
-          <ellipse cx="14" cy="36.5" rx="4" ry="1.5" fill="rgba(0,0,0,0.2)"/>
-          <path d="M14 0 C6.3 0 0 6.3 0 14 C0 23.5 14 38 14 38 C14 38 28 23.5 28 14 C28 6.3 21.7 0 14 0Z"
-                fill="url(#dg)" stroke="white" stroke-width="1.5"/>
-          <circle cx="9.5" cy="8.5" r="3" fill="rgba(255,255,255,0.4)"/>
-          <text x="14" y="19" text-anchor="middle" font-size="10" font-family="Arial" fill="white" font-weight="bold">JOB</text>
-        </svg>`;
-        const destIcon = L.icon({
-          iconUrl: "data:image/svg+xml;charset=utf-8," + encodeURIComponent(destSvg),
-          iconSize: [28,38], iconAnchor: [14,38], popupAnchor: [0,-40],
-        });
-        L.marker([jobLat, jobLng], { icon: destIcon })
-          .bindPopup(`<div style="font-family:Arial;font-size:12px;font-weight:700;">🔧 ${custName || "Job Location"}</div>`)
-          .addTo(routeGroup);
-
-        routeLines.current[id] = routeGroup.addTo(map);
+      // Route line
+      if (routeLines.current[id]) { map.removeLayer(routeLines.current[id]); routeLines.current[id]=null; }
+      if (activeJob?.latitude&&activeJob?.longitude&&status!=="FREE") {
+        const jLat=parseFloat(activeJob.latitude), jLng=parseFloat(activeJob.longitude);
+        const grp = L.layerGroup();
+        L.polyline([[loc.latitude,loc.longitude],[jLat,jLng]],{color:"#000",weight:5,opacity:0.07}).addTo(grp);
+        L.polyline([[loc.latitude,loc.longitude],[jLat,jLng]],{color:m.color,weight:3.5,opacity:0.85,dashArray:"10,7",lineCap:"round"}).addTo(grp);
+        const pinSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32">
+          <path d="M12 0C5.4 0 0 5.4 0 12C0 20.4 12 32 12 32C12 32 24 20.4 24 12C24 5.4 18.6 0 12 0Z" fill="${m.color}"/>
+          <text x="12" y="17" text-anchor="middle" font-size="8" font-family="system-ui" fill="white" font-weight="800">JOB</text></svg>`;
+        L.marker([jLat,jLng], {
+          icon: L.icon({iconUrl:"data:image/svg+xml;charset=utf-8,"+encodeURIComponent(pinSvg),iconSize:[24,32],iconAnchor:[12,32],popupAnchor:[0,-36]})
+        }).bindPopup(`<div style="font-family:system-ui;font-size:13px;font-weight:700;color:#1e293b;">🔧 ${custName||"Job"}</div>`).addTo(grp);
+        routeLines.current[id] = grp.addTo(map);
       }
     });
 
-    // Remove stale markers
+    // Remove stale
     Object.keys(techMarkers.current).forEach(id => {
       if (!seen.has(Number(id))) {
-        map.removeLayer(techMarkers.current[id]);
-        delete techMarkers.current[id];
+        map.removeLayer(techMarkers.current[id]); delete techMarkers.current[id];
         if (routeLines.current[id]) { map.removeLayer(routeLines.current[id]); delete routeLines.current[id]; }
       }
     });
 
-    // Fit bounds
-    if (displayLocs.length > 1) {
-      map.fitBounds(
-        window.L.latLngBounds(displayLocs.map(l => [l.latitude, l.longitude])),
-        { padding: [60, 60] }
-      );
-    } else if (displayLocs.length === 1) {
-      map.setView([displayLocs[0].latitude, displayLocs[0].longitude], 14);
+    if (!selId) {
+      if (displayLocs.length>1) map.fitBounds(L.latLngBounds(displayLocs.map(l=>[l.latitude,l.longitude])),{padding:[60,60],maxZoom:14});
+      else if (displayLocs.length===1) map.setView([displayLocs[0].latitude,displayLocs[0].longitude],14);
     }
   }
 
-  const displayed = filter === "ALL" ? locs : locs.filter(l => {
-    const s = techStatus(l);
-    if (filter === "FREE") return s === "FREE";
-    return s === filter;
-  });
+  function focusTech(loc) {
+    setSelId(loc.techId);
+    if (leafMap.current && techMarkers.current[loc.techId]) {
+      leafMap.current.setView([loc.latitude,loc.longitude],15,{animate:true});
+      setTimeout(() => techMarkers.current[loc.techId]?.openPopup(), 350);
+    }
+  }
 
-  const countByStatus = s => s === "FREE"
-    ? locs.filter(l => techStatus(l) === "FREE").length
-    : locs.filter(l => techStatus(l) === s).length;
+  const displayed = filter==="ALL" ? locs : locs.filter(l => {
+    const s = techStatus(l); return filter==="FREE" ? s==="FREE" : s===filter;
+  });
+  const count = (s) => s==="FREE"
+    ? locs.filter(l=>techStatus(l)==="FREE").length
+    : locs.filter(l=>techStatus(l)===s).length;
+
+  const FILTERS = [
+    {k:"ALL",        label:"All",         cnt:locs.length,         color:"#3b82f6"},
+    {k:"FREE",       label:"Available",   cnt:count("FREE"),       color:"#10b981"},
+    {k:"ASSIGNED",   label:"On Job",      cnt:count("ASSIGNED"),   color:"#f59e0b"},
+    {k:"ON_THE_WAY", label:"On Way",      cnt:count("ON_THE_WAY"), color:"#3b82f6"},
+    {k:"IN_PROGRESS",label:"In Progress", cnt:count("IN_PROGRESS"),color:"#8b5cf6"},
+  ];
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:12,
+      height: isMob ? "auto" : "calc(100vh - 130px)", minHeight: isMob ? "auto" : 520 }}>
 
-      {/* ── Header ── */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:10 }}>
+      {/* Pulse CSS */}
+      <style>{`
+        @keyframes livePulse {
+          0%   { transform:scale(0.8); opacity:0.7; }
+          100% { transform:scale(2.4); opacity:0; }
+        }
+      `}</style>
+
+      {/* ── HEADER ── */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
         <div>
-          <h2 style={{ fontSize:20, fontWeight:800, marginBottom:4 }}>📍 Live Technician Tracking</h2>
-          <p style={{ fontSize:13, color:"#64748b", margin:0 }}>
-            {locs.length} technician{locs.length !== 1 ? "s" : ""} live&nbsp;·&nbsp;
-            {lastSync ? `Last sync: ${lastSync.toLocaleTimeString("en-IN")}` : "Syncing..."}
+          <h2 style={{ fontSize:18, fontWeight:800, margin:0 }}>📍 Live Tracking</h2>
+          <p style={{ fontSize:12, color:"#64748b", margin:"2px 0 0" }}>
+            {locs.length} live
+            {lastSync && <> · {lastSync.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"})}</>}
           </p>
         </div>
-        <button onClick={fetchAll}
-          style={{ padding:"8px 16px", borderRadius:10, border:"1px solid #e2e8f0", background:"#fff", color:"#3b82f6", fontWeight:600, cursor:"pointer", fontSize:13 }}>
-          🔄 Refresh
-        </button>
-      </div>
-
-      {/* ── Status filter ── */}
-      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-        {[
-          { k:"ALL",         label:`👥 All (${locs.length})`,                   color:"#3b82f6" },
-          { k:"FREE",        label:`🟢 Available (${countByStatus("FREE")})`,    color:"#10b981" },
-          { k:"ASSIGNED",    label:`🟡 On Job (${countByStatus("ASSIGNED")})`,   color:"#f59e0b" },
-          { k:"ON_THE_WAY",  label:`🟡 On Way (${countByStatus("ON_THE_WAY")})`, color:"#f59e0b" },
-          { k:"IN_PROGRESS", label:`🔴 Busy (${countByStatus("IN_PROGRESS")})`,  color:"#ef4444" },
-        ].map(({ k, label, color }) => (
-          <button key={k} onClick={() => setFilter(k)}
-            style={{ padding:"6px 14px", borderRadius:20, fontWeight:600, fontSize:12, cursor:"pointer",
-              border: filter === k ? "none" : "1.5px solid #e2e8f0",
-              background: filter === k ? color : "#fff",
-              color: filter === k ? "#fff" : "#64748b",
-              transition:"all 0.15s" }}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Tech cards grid ── */}
-      {displayed.length > 0 && (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:10 }}>
-          {displayed.map(loc => {
-            const status    = techStatus(loc);
-            const m         = getMeta(status);
-            const activeJob = techActiveJob(loc.techId);
-            const mins      = loc.updatedAt ? Math.round((Date.now() - new Date(loc.updatedAt)) / 60000) : null;
-            return (
-              <div key={loc.techId} style={{
-                background:"#fff", borderRadius:16,
-                border:`1.5px solid ${m.color}30`,
-                borderTop:`3px solid ${m.color}`,
-                padding:14, boxShadow:"0 2px 8px rgba(0,0,0,0.05)",
-                cursor:"pointer", transition:"box-shadow 0.2s",
-              }}
-                onMouseEnter={e => e.currentTarget.style.boxShadow = `0 4px 20px ${m.color}25`}
-                onMouseLeave={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.05)"}
-                onClick={() => {
-                  if (leafMap.current && techMarkers.current[loc.techId]) {
-                    leafMap.current.setView([loc.latitude, loc.longitude], 15, { animate:true });
-                    techMarkers.current[loc.techId].openPopup();
-                  }
-                }}>
-
-                {/* Avatar + Name */}
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-                  <div style={{ width:44, height:44, borderRadius:"50%",
-                    background:`linear-gradient(135deg,${m.color},${m.color}bb)`,
-                    color:"#fff", fontWeight:900, fontSize:18,
-                    display:"flex", alignItems:"center", justifyContent:"center",
-                    flexShrink:0, boxShadow:`0 2px 8px ${m.color}50` }}>
-                    {(loc.name||"T")[0].toUpperCase()}
-                  </div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:800, fontSize:14, color:"#1e293b" }}>{loc.name}</div>
-                    <div style={{ fontSize:11, color:"#64748b" }}>📞 {loc.mobile}</div>
-                  </div>
-                </div>
-
-                {/* Status badge + time */}
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                  <span style={{ padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:700, background:m.bg, color:m.color }}>
-                    {m.emoji} {m.label}
-                  </span>
-                  <span style={{ fontSize:11, color: mins != null && mins > 5 ? "#f59e0b" : "#94a3b8", fontWeight: mins != null && mins > 5 ? 600 : 400 }}>
-                    {mins != null ? (mins < 1 ? "Just now" : `${mins}m ago`) : ""}
-                    {mins != null && mins > 5 ? " ⚠️" : ""}
-                  </span>
-                </div>
-
-                {/* Active job info */}
-                {activeJob && (
-                  <div style={{ fontSize:11, color:"#64748b", padding:"7px 10px", background:"#f8fafc", borderRadius:9, marginBottom:8, borderLeft:`2px solid ${m.color}` }}>
-                    <div style={{ fontWeight:700, color:"#374151", marginBottom:1 }}>🔧 Current Job</div>
-                    <div>{activeJob.customer?.name || activeJob.customerName || "—"}</div>
-                    {activeJob.machineType && <div style={{ color:"#94a3b8", marginTop:1 }}>🖥️ {activeJob.machineType} {activeJob.machineBrand}</div>}
-                    {(activeJob.latitude && activeJob.longitude) && (
-                      <div style={{ color:m.color, fontWeight:600, marginTop:2 }}>
-                        📏 {distKm(loc.latitude,loc.longitude,parseFloat(activeJob.latitude),parseFloat(activeJob.longitude)).toFixed(1)} km door
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Call + Maps buttons */}
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
-                  <a href={`tel:${loc.mobile}`}
-                    style={{ padding:"8px", background:"rgba(16,185,129,0.08)", color:"#059669", borderRadius:9, fontSize:12, fontWeight:600, textDecoration:"none", textAlign:"center" }}>
-                    📞 Call
-                  </a>
-                  <a href={`https://maps.google.com?q=${loc.latitude},${loc.longitude}`} target="_blank" rel="noreferrer"
-                    style={{ padding:"8px", background:"rgba(59,130,246,0.08)", color:"#3b82f6", borderRadius:9, fontSize:12, fontWeight:600, textDecoration:"none", textAlign:"center" }}>
-                    🗺️ Maps
-                  </a>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Map — fixed height, not full screen ── */}
-      <div style={{
-        borderRadius:16, overflow:"hidden",
-        border:"1px solid #e2e8f0",
-        boxShadow:"0 4px 20px rgba(0,0,0,0.08)",
-        position:"relative",
-        height: locs.length === 0 ? 360 : 460,
-      }}>
-        {loading ? (
-          <div style={{ height:"100%", display:"flex", alignItems:"center", justifyContent:"center", background:"#f8fafc", flexDirection:"column", gap:12 }}>
-            <div style={{ fontSize:32, animation:"spin 1s linear infinite" }}>⚡</div>
-            <div style={{ color:"#64748b", fontWeight:600 }}>Map load ho raha hai...</div>
-          </div>
-        ) : locs.length === 0 ? (
-          <div style={{ height:"100%", display:"flex", alignItems:"center", justifyContent:"center", background:"#f8fafc", flexDirection:"column", gap:10 }}>
-            <div style={{ fontSize:52 }}>📡</div>
-            <div style={{ fontWeight:700, color:"#64748b", fontSize:16 }}>Koi technician live nahi</div>
-            <div style={{ fontSize:13, color:"#94a3b8", maxWidth:300, textAlign:"center", lineHeight:1.5 }}>
-              Technician ka app open hona chahiye aur internet connection hona chahiye
-            </div>
-            <button onClick={fetchAll} style={{ marginTop:8, padding:"10px 20px", background:"#3b82f6", color:"#fff", border:"none", borderRadius:10, fontWeight:700, cursor:"pointer", fontSize:13 }}>
-              🔄 Refresh
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+          {FILTERS.map(({k,label,cnt,color}) => (
+            <button key={k} onClick={() => { setFilter(k); setSelId(null); }}
+              style={{ padding:"5px 11px", borderRadius:20, fontSize:12, fontWeight:700, cursor:"pointer",
+                border:"none", background:filter===k ? color : "#f1f5f9",
+                color:filter===k ? "#fff" : "#64748b",
+                boxShadow:filter===k ? `0 2px 8px ${color}40` : "none" }}>
+              {label} <span style={{ marginLeft:4, padding:"1px 5px", borderRadius:8, fontSize:10,
+                background:filter===k?"rgba(255,255,255,0.25)":"#e2e8f0", color:filter===k?"#fff":"#94a3b8" }}>{cnt}</span>
             </button>
-          </div>
-        ) : (
-          <>
-            <div ref={mapRef} style={{ height:"100%", width:"100%" }} />
-            {/* Legend overlay */}
-            <div style={{
-              position:"absolute", bottom:16, left:16, zIndex:1000,
-              background:"rgba(255,255,255,0.95)", backdropFilter:"blur(8px)",
-              border:"1px solid #e2e8f0", borderRadius:12,
-              padding:"8px 12px", boxShadow:"0 4px 16px rgba(0,0,0,0.1)",
-              fontSize:11, fontWeight:600,
-            }}>
-              {[["🟢","Available"],["🟡","On Job"],["🔴","Busy"],["⚫","Offline"]].map(([em,lbl]) => (
-                <div key={lbl} style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
-                  <span style={{ fontSize:12 }}>{em}</span>
-                  <span style={{ color:"#374151" }}>{lbl}</span>
-                </div>
-              ))}
+          ))}
+          <button onClick={fetchAll}
+            style={{ padding:"5px 12px", borderRadius:20, border:"1.5px solid #e2e8f0",
+              background:"#fff", color:"#3b82f6", fontWeight:700, fontSize:12, cursor:"pointer" }}>
+            🔄
+          </button>
+        </div>
+      </div>
+
+      {/* ── MAIN: Left panel + Right map ── */}
+      <div style={{ display:"flex", flexDirection: isMob?"column":"row", gap:12, flex:1, minHeight:0 }}>
+
+        {/* LEFT PANEL */}
+        <div style={{
+          width: isMob?"100%":280, flexShrink:0,
+          display:"flex", flexDirection:"column", gap:8,
+          overflowY: isMob?"visible":"auto",
+          maxHeight: isMob?"auto":"100%",
+          paddingRight: isMob?0:2,
+        }}>
+          {loading ? (
+            <div style={{padding:40,textAlign:"center",color:"#94a3b8"}}>
+              <div style={{fontSize:28,marginBottom:8}}>⚡</div>
+              <div style={{fontWeight:600}}>Loading...</div>
             </div>
-            {/* Route info overlay */}
-            {locs.some(l => techActiveJob(l.techId)?.latitude) && (
-              <div style={{
-                position:"absolute", top:16, right:16, zIndex:1000,
-                background:"rgba(255,255,255,0.95)", backdropFilter:"blur(8px)",
-                border:"1px solid #e2e8f0", borderRadius:12,
-                padding:"8px 12px", boxShadow:"0 4px 16px rgba(0,0,0,0.1)",
-                fontSize:11, color:"#374151", fontWeight:600,
-              }}>
-                <div style={{ marginBottom:4, color:"#64748b", fontWeight:700 }}>🗺️ Routes</div>
-                <div>- - - Technician → Job</div>
-                <div style={{ marginTop:2, color:"#94a3b8" }}>📍 = Job Location</div>
+          ) : displayed.length===0 ? (
+            <div style={{padding:32,textAlign:"center",background:"#fff",borderRadius:16,
+              border:"1px solid #e2e8f0",color:"#94a3b8"}}>
+              <div style={{fontSize:40,marginBottom:10}}>📡</div>
+              <div style={{fontWeight:700,fontSize:14,color:"#64748b"}}>Koi technician live nahi</div>
+              <div style={{fontSize:12,marginTop:6,lineHeight:1.5}}>TechApp kholo aur Active toggle ON karo</div>
+            </div>
+          ) : (
+            displayed.map(loc => {
+              const status = techStatus(loc), m = getMeta(status);
+              const activeJob = techActiveJob(loc.techId);
+              const ago = timeAgo(loc.updatedAt);
+              const isSelected = selId===loc.techId;
+              const jobDist = (activeJob?.latitude&&activeJob?.longitude)
+                ? distKm(loc.latitude,loc.longitude,parseFloat(activeJob.latitude),parseFloat(activeJob.longitude)).toFixed(1) : null;
+
+              return (
+                <div key={loc.techId} onClick={() => isSelected ? setSelId(null) : focusTech(loc)}
+                  style={{
+                    background:"#fff", borderRadius:14,
+                    borderLeft:`4px solid ${m.color}`,
+                    border:`2px solid ${isSelected?m.color:"#f1f5f9"}`,
+                    padding:"12px 13px", cursor:"pointer", transition:"all 0.18s",
+                    boxShadow: isSelected ? `0 4px 20px ${m.color}25` : "0 1px 4px rgba(0,0,0,0.04)",
+                    transform: isSelected ? "translateX(2px)" : "none",
+                  }}>
+
+                  {/* Avatar + Name + Status */}
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                    <div style={{position:"relative",flexShrink:0}}>
+                      {status!=="FREE"&&status!=="OFFLINE" && (
+                        <div style={{position:"absolute",inset:-3,borderRadius:"50%",
+                          background:`${m.color}25`,animation:"livePulse 2s ease-out infinite"}}/>
+                      )}
+                      <div style={{width:38,height:38,borderRadius:"50%",position:"relative",
+                        background:`linear-gradient(135deg,${m.color},${m.color}aa)`,
+                        color:"#fff",fontWeight:900,fontSize:15,
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        boxShadow:`0 2px 8px ${m.color}45`}}>
+                        {(loc.name||"T")[0].toUpperCase()}
+                      </div>
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:800,fontSize:14,color:"#0f172a",
+                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{loc.name}</div>
+                      <div style={{fontSize:11,color:"#64748b",marginTop:1}}>📞 {loc.mobile}</div>
+                    </div>
+                    <span style={{padding:"3px 8px",borderRadius:20,fontSize:10,
+                      fontWeight:700,background:m.bg,color:m.color,flexShrink:0,whiteSpace:"nowrap"}}>
+                      {m.emoji} {m.label}
+                    </span>
+                  </div>
+
+                  {/* Last sync time */}
+                  {ago && (
+                    <div style={{fontSize:11,marginBottom:activeJob?8:0,
+                      color:ago.stale?"#f59e0b":"#94a3b8",fontWeight:ago.stale?700:400}}>
+                      🕐 {ago.text}{ago.stale?" ⚠️":""}
+                    </div>
+                  )}
+
+                  {/* Active job */}
+                  {activeJob && (
+                    <div style={{background:`${m.color}08`,borderRadius:8,
+                      padding:"7px 10px",borderLeft:`2px solid ${m.color}`,marginBottom:8}}>
+                      <div style={{fontSize:11,fontWeight:700,color:"#374151"}}>
+                        🔧 {activeJob.customer?.name||activeJob.customerName||"Job"}
+                      </div>
+                      {activeJob.machineType&&<div style={{fontSize:10,color:"#64748b",marginTop:1}}>🖥️ {activeJob.machineType} {activeJob.machineBrand}</div>}
+                      {jobDist&&<div style={{fontSize:11,color:m.color,fontWeight:700,marginTop:2}}>📏 {jobDist} km door</div>}
+                    </div>
+                  )}
+
+                  {/* Buttons */}
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                    <a href={`tel:${loc.mobile}`} onClick={e=>e.stopPropagation()}
+                      style={{padding:"7px",background:"rgba(16,185,129,0.08)",color:"#059669",
+                        borderRadius:8,fontSize:12,fontWeight:700,textDecoration:"none",
+                        textAlign:"center",border:"1px solid rgba(16,185,129,0.2)"}}>📞 Call</a>
+                    <a href={`https://maps.google.com?q=${loc.latitude},${loc.longitude}`}
+                      target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
+                      style={{padding:"7px",background:"rgba(59,130,246,0.08)",color:"#2563eb",
+                        borderRadius:8,fontSize:12,fontWeight:700,textDecoration:"none",
+                        textAlign:"center",border:"1px solid rgba(59,130,246,0.2)"}}>🗺️ Maps</a>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* RIGHT: MAP */}
+        <div style={{flex:1,borderRadius:16,overflow:"hidden",
+          border:"1px solid #e2e8f0",boxShadow:"0 4px 20px rgba(0,0,0,0.07)",
+          position:"relative",minHeight: isMob?360:0,background:"#f8fafc"}}>
+
+          {loading ? (
+            <div style={{height:"100%",minHeight:360,display:"flex",alignItems:"center",
+              justifyContent:"center",flexDirection:"column",gap:12}}>
+              <div style={{fontSize:36}}>⚡</div>
+              <div style={{color:"#64748b",fontWeight:600}}>Map load ho raha hai...</div>
+            </div>
+          ) : locs.length===0 ? (
+            <div style={{height:"100%",minHeight:360,display:"flex",alignItems:"center",
+              justifyContent:"center",flexDirection:"column",gap:10}}>
+              <div style={{fontSize:52}}>📡</div>
+              <div style={{fontWeight:700,color:"#64748b",fontSize:16}}>Koi technician live nahi</div>
+              <div style={{fontSize:12,color:"#94a3b8",textAlign:"center",lineHeight:1.5,maxWidth:260}}>
+                Technician ka TechApp open hona chahiye aur Active ON
               </div>
-            )}
-          </>
-        )}
+              <button onClick={fetchAll} style={{marginTop:8,padding:"10px 20px",background:"#3b82f6",
+                color:"#fff",border:"none",borderRadius:10,fontWeight:700,cursor:"pointer"}}>
+                🔄 Refresh
+              </button>
+            </div>
+          ) : (
+            <>
+              <div ref={mapRef} style={{height:"100%",width:"100%",minHeight:isMob?360:0}}/>
+
+              {/* Legend */}
+              <div style={{position:"absolute",bottom:16,left:16,zIndex:1000,
+                background:"rgba(255,255,255,0.95)",backdropFilter:"blur(8px)",
+                border:"1px solid #e2e8f0",borderRadius:12,
+                padding:"8px 12px",boxShadow:"0 4px 14px rgba(0,0,0,0.08)",
+                fontSize:11,fontWeight:600}}>
+                {[["🟢","Available"],["🟡","On Job"],["🔵","On Way"],["🟣","In Progress"],["⚫","Offline"]].map(([em,lbl])=>(
+                  <div key={lbl} style={{display:"flex",alignItems:"center",gap:5,marginBottom:2,color:"#374151"}}>
+                    <span>{em}</span><span>{lbl}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Routes legend */}
+              {locs.some(l=>techActiveJob(l.techId)?.latitude) && (
+                <div style={{position:"absolute",top:16,right:16,zIndex:1000,
+                  background:"rgba(255,255,255,0.95)",backdropFilter:"blur(8px)",
+                  border:"1px solid #e2e8f0",borderRadius:12,
+                  padding:"8px 12px",boxShadow:"0 4px 14px rgba(0,0,0,0.08)",
+                  fontSize:11,color:"#374151",fontWeight:600}}>
+                  <div style={{marginBottom:3,color:"#3b82f6"}}>🗺️ Routes</div>
+                  <div style={{color:"#94a3b8"}}>- - - Tech → Job</div>
+                  <div style={{color:"#94a3b8",marginTop:1}}>📍 = Job</div>
+                </div>
+              )}
+
+              {/* Selected tech overlay */}
+              {selId && (() => {
+                const sl = locs.find(l=>l.techId===selId);
+                if (!sl) return null;
+                const m = getMeta(techStatus(sl));
+                return (
+                  <div style={{position:"absolute",top:16,left:16,zIndex:1000,
+                    background:"#fff",border:`2px solid ${m.color}`,borderRadius:12,
+                    padding:"8px 14px",boxShadow:`0 4px 16px ${m.color}30`,
+                    display:"flex",alignItems:"center",gap:8,fontSize:12}}>
+                    <div style={{width:28,height:28,borderRadius:"50%",
+                      background:`linear-gradient(135deg,${m.color},${m.color}aa)`,
+                      color:"#fff",fontWeight:900,fontSize:13,flexShrink:0,
+                      display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {(sl.name||"T")[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{fontWeight:800,color:"#0f172a",fontSize:13}}>{sl.name}</div>
+                      <div style={{color:m.color,fontWeight:700,fontSize:10}}>{m.emoji} {m.label}</div>
+                    </div>
+                    <button onClick={()=>setSelId(null)}
+                      style={{background:"#f1f5f9",border:"none",borderRadius:6,
+                        width:22,height:22,cursor:"pointer",color:"#64748b",marginLeft:4,
+                        display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>✕</button>
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
