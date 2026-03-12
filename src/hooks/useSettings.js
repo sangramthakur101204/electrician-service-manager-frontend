@@ -19,6 +19,7 @@ export function useSettings() {
     assignedMsgTemplate: "",
     warrantyMsgTemplate: "",
     thankyouMsgTemplate: "",
+    linksJson: "",
   });
 
   useEffect(() => {
@@ -53,6 +54,25 @@ export function useSettings() {
     Object.entries({ ...vars, companyName: comp }).forEach(([k, v]) => {
       msg = msg.replace(new RegExp(`\\{${k}\\}`, "g"), v || "");
     });
+
+    // Auto-append footer: company contact + address (clickable Maps) + custom links
+    const footerParts = [];
+    if (settings.companyPhone)  footerParts.push(`📞 ${settings.companyPhone}`);
+    if (settings.companyPhone2) footerParts.push(`📞 ${settings.companyPhone2}`);
+    if (settings.companyEmail)  footerParts.push(`✉️ ${settings.companyEmail}`);
+    if (settings.companyAddress) {
+      footerParts.push(`📍 ${settings.companyAddress}`);
+      footerParts.push(`🗺️ https://maps.google.com/?q=${encodeURIComponent(settings.companyAddress)}`);
+    }
+    try {
+      const links = JSON.parse(settings.linksJson || "[]");
+      links.filter(l=>l.url).forEach(l => footerParts.push(`🔗 ${l.label ? l.label+": " : ""}${l.url}`));
+    } catch(e) {}
+
+    if (footerParts.length > 0) {
+      msg = msg + "\n\n" + footerParts.join("\n");
+    }
+
     return msg;
   };
 
