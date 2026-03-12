@@ -1,5 +1,5 @@
 // src/components/owner/Settings.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { authHeader, apiFetch } from "../../services/api";
 import { useToast } from "../Toast.jsx";
 
@@ -47,6 +47,7 @@ export default function Settings({ onLogout }) {
     companyEmail:"", gstNumber:"", tagline:"",
     rateCardJson:"", invoiceMsgTemplate:"",
     assignedMsgTemplate:"", warrantyMsgTemplate:"", thankyouMsgTemplate:"",
+    signatureBase64:"",
   });
   const [rateCard, setRateCard] = useState(DEFAULT_RATE_CARD);
 
@@ -115,7 +116,7 @@ export default function Settings({ onLogout }) {
 
       {/* Tab Nav */}
       <div style={{ display:"flex", gap:8, borderBottom:"2px solid #f1f5f9", paddingBottom:0 }}>
-        {[["company","🏢 Company"],["ratecard","📋 Rate Card"],["messages","💬 Messages"]].map(([k,label]) => (
+        {[["company","🏢 Company"],["ratecard","📋 Rate Card"],["messages","💬 Messages"],["signature","✍️ Signature"]].map(([k,label]) => (
           <button key={k} onClick={()=>setTab(k)}
             style={{ padding:"10px 16px", border:"none", cursor:"pointer", fontWeight:700, fontSize:13,
               background:"none", borderBottom: tab===k ? "2px solid #3b82f6" : "2px solid transparent",
@@ -245,6 +246,9 @@ export default function Settings({ onLogout }) {
         </div>
       )}
 
+      {/* ── SIGNATURE TAB ── */}
+      {tab === "signature" && <SignaturePad value={s.signatureBase64} onChange={v=>set("signatureBase64",v)} onSave={save} saving={saving} />}
+
       {/* ── LOGOUT BUTTON ── */}
       {onLogout && (
         <div style={{ padding:"24px 0 8px", borderTop:"1px solid #f1f5f9", marginTop:8 }}>
@@ -255,5 +259,132 @@ export default function Settings({ onLogout }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// SIGNATURE PAD COMPONENT
+// ─────────────────────────────────────────────────────────
+function SignaturePad({ value, onChange, onSave, saving }) {
+  const canvasRef = useRef(null);
+  const drawing   = useRef(false);
+  const lastPos   = useRef(null);
+  const [hasDrawn, setHasDrawn] = useState(false);
+
+  // Load existing signature onto canvas on mount
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (value) {
+      const img = new Image();
+      img.onload = () => { ctx.drawImage(img, 0, 0); setHasDrawn(true); };
+      img.src = value;
+    }
+  }, []);
+
+  const getPos = (e, canvas) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const src = e.touches ? e.touches[0] : e;
+    return {
+      x: (src.clientX - rect.left) * scaleX,
+      y: (src.clientY - rect.top)  * scaleY,
+    };
+  };
+
+  const startDraw = (e) => {
+    e.preventDefault();
+    drawing.current = true;
+    lastPos.current = getPos(e, canvasRef.current);
+  };
+
+  const draw = (e) => {
+    e.preventDefault();
+    if (!drawing.current) return;
+    const canvas = canvasRef.current;
+    const ctx    = canvas.getContext("2d");
+    const pos    = getPos(e, canvas);
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current.x, lastPos.current.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth   = 2.5;
+    ctx.lineCap     = "round";
+    ctx.lineJoin    = "round";
+    ctx.stroke();
+    lastPos.current = pos;
+    setHasDrawn(true);
+    onChange(canvas.toDataURL("image/png"));
+  };
+
+  const stopDraw = (e) => { drawing.current = false; };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const ctx    = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    setHasDrawn(false);
+    onChange("");
+  };
+
+  return (
+    <Section title="Haath Se Signature" icon="✍️">
+      <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+        <div style={{ fontSize:13, color:"#64748b", lineHeight:1.6 }}>
+          Neeche apna haath se signature karo — har invoice ke PDF mein <strong>"Authorised Signature"</strong> ke neeche print hoga.
+        </div>
+
+        <div style={{ border:"2px solid #e2e8f0", borderRadius:12, overflow:"hidden",
+          background:"#fff", position:"relative", touchAction:"none" }}>
+          <canvas
+            ref={canvasRef}
+            width={600} height={180}
+            style={{ width:"100%", height:180, display:"block", cursor:"crosshair" }}
+            onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw}
+            onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw}
+          />
+          {!hasDrawn && (
+            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center",
+              justifyContent:"center", pointerEvents:"none" }}>
+              <span style={{ color:"#cbd5e1", fontSize:15, fontWeight:600 }}>✍️ Yahan sign karo...</span>
+            </div>
+          )}
+        </div>
+
+        {value && !hasDrawn && (
+          <div style={{ padding:12, background:"#f8fafc", borderRadius:10,
+            border:"1px solid #e2e8f0", textAlign:"center" }}>
+            <div style={{ fontSize:11, color:"#94a3b8", marginBottom:6, fontWeight:700, textTransform:"uppercase" }}>Saved Signature</div>
+            <img src={value} alt="signature" style={{ maxHeight:80, maxWidth:"100%",
+              border:"1px solid #e2e8f0", borderRadius:6 }} />
+          </div>
+        )}
+
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={clearCanvas}
+            style={{ padding:"9px 20px", borderRadius:10, border:"1.5px solid #e2e8f0",
+              background:"#fff", color:"#64748b", fontWeight:700, fontSize:13, cursor:"pointer" }}>
+            🗑️ Clear
+          </button>
+          <button onClick={onSave} disabled={saving}
+            style={{ flex:1, padding:"10px", borderRadius:10,
+              background:"linear-gradient(135deg,#3b82f6,#2563eb)", color:"#fff",
+              border:"none", fontWeight:800, fontSize:14,
+              cursor:saving?"not-allowed":"pointer", opacity:saving?0.7:1 }}>
+            {saving ? "⏳ Save ho raha hai..." : "💾 Signature Save Karo"}
+          </button>
+        </div>
+
+        <div style={{ fontSize:12, color:"#94a3b8", padding:"10px 14px",
+          background:"rgba(59,130,246,0.04)", borderRadius:8, border:"1px solid rgba(59,130,246,0.1)" }}>
+          💡 <strong>Tip:</strong> Mouse ya touchscreen se sign karo. Save ke baad har nayi invoice PDF ke bottom-right mein dikhega.
+        </div>
+      </div>
+    </Section>
   );
 }
