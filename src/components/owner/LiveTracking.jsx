@@ -100,35 +100,41 @@ export default function LiveTracking({ onNavigate }) {
   }
 
   function makeTechIcon(loc, status, isSelected) {
-    const m    = getMeta(status);
-    const init = (loc.name || "T")[0].toUpperCase();
-    const name = (loc.name || "Tech");
-    const shortName = name.length > 8 ? name.slice(0,7) + "\u2026" : name;
-    const pulse = (status !== "FREE" && status !== "OFFLINE")
-      ? `<div style="position:absolute;inset:-4px;border-radius:50%;border:2px solid ${m.color};opacity:0.4;animation:livePulse 2s ease-out infinite;"></div>`
-      : "";
-    const html = `
-      <div style="width:64px;font-family:system-ui,sans-serif;position:relative;cursor:pointer;
-        filter:drop-shadow(0 3px 8px rgba(0,0,0,0.16));">
-        <div style="background:#fff;border-radius:12px;padding:6px 5px 5px;text-align:center;
-          border:${isSelected ? "3px" : "2px"} solid ${m.color};">
-          <div style="position:relative;width:34px;height:34px;margin:0 auto 3px;">
-            ${pulse}
-            <div style="width:34px;height:34px;border-radius:50%;
-              background:linear-gradient(135deg,${m.color},${m.color}bb);
-              color:#fff;font-weight:900;font-size:14px;
-              display:flex;align-items:center;justify-content:center;">${init}</div>
-          </div>
-          <div style="font-size:9px;font-weight:800;color:#1e293b;
-            white-space:nowrap;width:54px;text-align:center;overflow:hidden;">${shortName}</div>
-          <div style="margin-top:2px;display:inline-block;width:7px;height:7px;border-radius:50%;
-            background:${m.color};box-shadow:0 0 0 2px ${m.color}30;"></div>
-        </div>
-        <div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
-          width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;
-          border-top:6px solid ${m.color};"></div>
-      </div>`;
-    return window.L.divIcon({ html, className:"", iconSize:[64,80], iconAnchor:[32,86], popupAnchor:[0,-90] });
+    const m     = getMeta(status);
+    const init  = (loc.name || "T")[0].toUpperCase();
+    const label = (loc.name || "Tech").slice(0, 9);
+    const bw    = isSelected ? 3 : 2;
+    const W = 64, H = 76;
+    // Pure SVG — works 100% in Leaflet, no CSS conflicts
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+      <!-- card shadow -->
+      <rect x="2" y="2" width="60" height="54" rx="12" ry="12"
+        fill="rgba(0,0,0,0.10)" />
+      <!-- card bg -->
+      <rect x="1" y="1" width="60" height="52" rx="11" ry="11"
+        fill="white" stroke="${m.color}" stroke-width="${bw}" />
+      <!-- avatar circle -->
+      <circle cx="32" cy="20" r="14" fill="${m.color}" />
+      <!-- initial letter -->
+      <text x="32" y="25" text-anchor="middle"
+        font-family="Arial,sans-serif" font-size="14" font-weight="900"
+        fill="white">${init}</text>
+      <!-- name -->
+      <text x="32" y="43" text-anchor="middle"
+        font-family="Arial,sans-serif" font-size="9" font-weight="800"
+        fill="#1e293b">${label}</text>
+      <!-- status dot -->
+      <circle cx="32" cy="51" r="3" fill="${m.color}" />
+      <!-- arrow pointer -->
+      <polygon points="26,53 38,53 32,${H}" fill="${m.color}" />
+    </svg>`;
+    const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    return window.L.icon({
+      iconUrl:     url,
+      iconSize:    [W, H],
+      iconAnchor:  [W/2, H],
+      popupAnchor: [0, -H],
+    });
   }
 
   function updateMarkers() {

@@ -69,6 +69,13 @@ export default function JobAssign() {
     problemDescription:"", machineType:"", machineBrand:"",
     priority:"NORMAL", technicianId:"", scheduledDate:"", scheduledTime:"", notes:"",
   });
+  // Multiple machines support
+  const [jobMachines, setJobMachines] = useState([{ machineType:"", machineBrand:"" }]);
+  const addMachineRow    = () => setJobMachines(ms => [...ms, { machineType:"", machineBrand:"" }]);
+  const removeMachineRow = (i) => setJobMachines(ms => ms.filter((_,idx) => idx !== i));
+  const setMachineField  = (i, k, v) => setJobMachines(ms =>
+    ms.map((m, idx) => idx === i ? { ...m, [k]: v, ...(k==="machineType"?{machineBrand:""}:{}) } : m)
+  );
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -131,6 +138,7 @@ export default function JobAssign() {
     setForm({ customerName:"", customerMobile:"", customerAddress:"", latitude:null, longitude:null,
               problemDescription:"", machineType:"", machineBrand:"",
               priority:"NORMAL", technicianId:"", scheduledDate:"", scheduledTime:"", notes:"" });
+    setJobMachines([{ machineType:"", machineBrand:"" }]);
     setSelectedCus(null); setCusSearch(""); setIsNewCus(false);
   };
 
@@ -140,14 +148,29 @@ export default function JobAssign() {
       // New customer
       if (!form.customerName.trim())          { toast("Customer naam bharo", "warning"); return; }
       if (!/^\d{10}$/.test(form.customerMobile)) { toast("10-digit mobile bharo", "warning"); return; }
-      if (!form.machineType)                  { toast("Machine type select karo", "warning"); return; }
+      if (!jobMachines[0]?.machineType)       { toast("Machine type select karo", "warning"); return; }
     }
 
     setLoading(true);
     try {
+      // Use first machine from jobMachines array
+      const primaryMachine = jobMachines[0] || {};
+      const allMachinesStr = jobMachines
+        .filter(m => m.machineType)
+        .map(m => `${m.machineType}${m.machineBrand ? " - " + m.machineBrand : ""}`)
+        .join(", ");
+
       const body = selectedCus
-        ? { customerId: selectedCus.id, ...form }
-        : { ...form };
+        ? { customerId: selectedCus.id, ...form,
+            machineType:  primaryMachine.machineType  || form.machineType,
+            machineBrand: primaryMachine.machineBrand || form.machineBrand,
+            machinesInfo: allMachinesStr,  // extra info in notes
+          }
+        : { ...form,
+            machineType:  primaryMachine.machineType,
+            machineBrand: primaryMachine.machineBrand,
+            machinesInfo: allMachinesStr,
+          };
 
       const res  = await apiFetch(`${API}/jobs`, {
         method: "POST", headers: authHeader(),
@@ -429,22 +452,40 @@ export default function JobAssign() {
 
               {/* ── MACHINE ── */}
               <Section title="🔧 Machine Details">
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                  <Field label="Machine Type *">
-                    <select value={form.machineType}
-                      onChange={e=>{ set("machineType",e.target.value); set("machineBrand",""); }}
-                      style={inp}>
-                      <option value="">-- Select --</option>
-                      {MACHINE_TYPES.map(m => <option key={m}>{m}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Brand">
-                    <select value={form.machineBrand} onChange={e=>set("machineBrand",e.target.value)} style={inp}>
-                      <option value="">-- Select --</option>
-                      {(MACHINE_BRANDS[form.machineType] || MACHINE_BRANDS["Other"]).map(b => <option key={b}>{b}</option>)}
-                    </select>
-                  </Field>
-                </div>
+                {jobMachines.map((m, idx) => (
+                  <div key={idx} style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10,
+                    marginBottom:8, padding:8, background:"#f8fafc", borderRadius:10,
+                    border:"1px solid #e2e8f0", position:"relative" }}>
+                    {jobMachines.length > 1 && (
+                      <button onClick={() => removeMachineRow(idx)}
+                        style={{ position:"absolute", top:6, right:6, background:"rgba(239,68,68,0.1)",
+                          border:"none", color:"#ef4444", borderRadius:6, padding:"2px 7px",
+                          cursor:"pointer", fontSize:11, fontWeight:700 }}>✕</button>
+                    )}
+                    <Field label={`Machine ${idx+1} Type${idx===0?" *":""}`}>
+                      <select value={m.machineType}
+                        onChange={e => setMachineField(idx,"machineType",e.target.value)}
+                        style={inp}>
+                        <option value="">-- Select --</option>
+                        {MACHINE_TYPES.map(t => <option key={t}>{t}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Brand">
+                      <select value={m.machineBrand}
+                        onChange={e => setMachineField(idx,"machineBrand",e.target.value)}
+                        style={inp}>
+                        <option value="">-- Select --</option>
+                        {(MACHINE_BRANDS[m.machineType] || MACHINE_BRANDS["Other"]).map(b => <option key={b}>{b}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+                ))}
+                <button onClick={addMachineRow}
+                  style={{ width:"100%", padding:"7px", border:"1.5px dashed #3b82f6",
+                    background:"rgba(59,130,246,0.04)", color:"#3b82f6", borderRadius:9,
+                    fontWeight:700, fontSize:12, cursor:"pointer" }}>
+                  + Aur Ek Machine Add Karo
+                </button>
               </Section>
 
 

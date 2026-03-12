@@ -6,6 +6,20 @@ import { generateWarrantyCard } from "../WarrantyCard";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
+const MACHINE_TYPES = ["AC","Washing Machine","Water Purifier","Refrigerator","Microwave","Geyser","Fan","Motor Pump","Inverter","Other"];
+const MACHINE_BRANDS = {
+  "AC":              ["LG","Samsung","Daikin","Voltas","Blue Star","Carrier","Hitachi","Panasonic","Whirlpool","Other"],
+  "Washing Machine": ["LG","Samsung","Whirlpool","IFB","Bosch","Godrej","Haier","Panasonic","Other"],
+  "Refrigerator":    ["LG","Samsung","Whirlpool","Godrej","Haier","Bosch","Panasonic","Voltas","Other"],
+  "Microwave":       ["LG","Samsung","IFB","Panasonic","Godrej","Bajaj","Other"],
+  "Geyser":          ["Racold","Bajaj","V-Guard","Havells","AO Smith","Crompton","Other"],
+  "Water Purifier":  ["Kent","Aquaguard","Pureit","Livpure","Blue Star","Eureka Forbes","Other"],
+  "Fan":             ["Usha","Orient","Havells","Crompton","Bajaj","V-Guard","Other"],
+  "Motor Pump":      ["Kirloskar","V-Guard","Crompton","Grundfos","Havells","Other"],
+  "Inverter":        ["Luminous","Microtek","Exide","Su-Kam","Amaron","Other"],
+  "Other":           ["Other"],
+};
+
 const STATUS_FLOW = {
   ASSIGNED:    { next:"ON_THE_WAY",  label:"🛵 Niklo",       color:"#f59e0b", bg:"rgba(245,158,11,0.12)"  },
   ON_THE_WAY:  { next:"IN_PROGRESS", label:"🔧 Kaam Shuru",  color:"#3b82f6", bg:"rgba(59,130,246,0.12)"  },
@@ -48,7 +62,8 @@ export default function TechApp({ user, onLogout }) {
 
   // Step 1 state
   const [sForm, setSForm] = useState({
-    serialNumber:"", serviceDate:today(), warrantyPeriod:"1 year", serviceDetails:""
+    serialNumber:"", serviceDate:today(), warrantyPeriod:"1 year", serviceDetails:"",
+    machineType:"", machineBrand:"",
   });
   const [savingSvc, setSavingSvc] = useState(false);
   const [doneData,  setDoneData]  = useState(null); // response from /complete
@@ -69,16 +84,16 @@ export default function TechApp({ user, onLogout }) {
     const s = localStorage.getItem(`tech_active_start_${user?.id}`);
     return s ? new Date(s) : null;
   });
+  // Init from activeStart so page refresh pe zero nahi hoga
   const [activeMins, setActiveMins] = useState(0);
 
-  // Count active minutes
+  // Recalculate every 30s + immediately when activeStart changes
   useEffect(() => {
-    if (!isActive || !activeStart) return;
-    const interval = setInterval(() => {
-      const mins = Math.floor((Date.now() - new Date(activeStart).getTime()) / 60000);
-      setActiveMins(mins);
-    }, 10000);
-    return () => clearInterval(interval);
+    if (!isActive || !activeStart) { setActiveMins(0); return; }
+    const calc = () => setActiveMins(Math.max(0, Math.floor((Date.now() - new Date(activeStart).getTime()) / 60000)));
+    calc(); // run immediately on mount/change
+    const t = setInterval(calc, 30000);
+    return () => clearInterval(t);
   }, [isActive, activeStart]);
 
   const toggleActive = async () => {
@@ -339,7 +354,7 @@ export default function TechApp({ user, onLogout }) {
     setStep(null);
     setDoneData(null);
     setInvoice(null);
-    setSForm({serialNumber:"",serviceDate:today(),warrantyPeriod:"1 year",serviceDetails:""});
+    setSForm({serialNumber:"",serviceDate:today(),warrantyPeriod:"1 year",serviceDetails:"",machineType:"",machineBrand:""});
     setItems([row()]);
     setDiscount(""); setPayment("Cash");
     setScreen("detail");
@@ -607,6 +622,50 @@ export default function TechApp({ user, onLogout }) {
             <div style={{padding:"12px 16px",display:"flex",flexDirection:"column",gap:14}}>
 
               <InfoBox color="#8b5cf6" text="Service ki details bhar do — customer record mein save hoga aur aage invoice aayega"/>
+
+              {/* Machine selection — customer ki registered machine + nai add karne ka option */}
+              <div style={{background:"rgba(59,130,246,0.05)",border:"1px solid rgba(59,130,246,0.15)",borderRadius:10,padding:"10px 12px"}}>
+                <div style={{fontSize:11,fontWeight:800,color:"#3b82f6",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:8}}>🔧 Kis Machine Ka Kaam?</div>
+                {/* Show customer's existing machine if available */}
+                {(selected?.customer?.machineType || selected?.machineType) && (
+                  <button
+                    onClick={()=>setSForm(f=>({...f,
+                      machineType: f.machineType ? "" : (selected?.customer?.machineType||selected?.machineType||""),
+                      machineBrand: f.machineType ? "" : (selected?.customer?.machineBrand||selected?.machineBrand||""),
+                    }))}
+                    style={{width:"100%",padding:"8px 12px",borderRadius:8,marginBottom:8,cursor:"pointer",
+                      fontWeight:700,fontSize:13,textAlign:"left",
+                      background: sForm.machineType===(selected?.customer?.machineType||selected?.machineType)
+                        ? "rgba(59,130,246,0.15)" : "#fff",
+                      border: sForm.machineType===(selected?.customer?.machineType||selected?.machineType)
+                        ? "2px solid #3b82f6" : "1.5px solid #e2e8f0",
+                      color:"#1e293b"}}>
+                    {sForm.machineType===(selected?.customer?.machineType||selected?.machineType) ? "✅ " : ""}
+                    🖥️ {selected?.customer?.machineType||selected?.machineType} — {selected?.customer?.machineBrand||selected?.machineBrand||""}
+                  </button>
+                )}
+                {/* Manual type/brand */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",marginBottom:4}}>Type</div>
+                    <select className="tech-inv-input"
+                      value={sForm.machineType}
+                      onChange={e=>setSForm(f=>({...f,machineType:e.target.value,machineBrand:""}))}>
+                      <option value="">-- Select --</option>
+                      {MACHINE_TYPES.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",marginBottom:4}}>Brand</div>
+                    <select className="tech-inv-input"
+                      value={sForm.machineBrand}
+                      onChange={e=>setSForm(f=>({...f,machineBrand:e.target.value}))}>
+                      <option value="">-- Select --</option>
+                      {(MACHINE_BRANDS[sForm.machineType]||MACHINE_BRANDS["Other"]).map(b=><option key={b}>{b}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
 
               <Field label="Serial Number (Optional)">
                 <input className="tech-inv-input" placeholder="Machine ka serial number"
