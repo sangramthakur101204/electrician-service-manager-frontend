@@ -63,8 +63,9 @@ export default function TechApp({ user, onLogout }) {
   // Step 1 state
   const [sForm, setSForm] = useState({
     serialNumber:"", serviceDate:today(), warrantyPeriod:"1 year", serviceDetails:"",
-    machineType:"", machineBrand:"",
+    machineType:"", machineBrand:"",  // primary (first) machine — kept for backward compat
   });
+  const [invMachines, setInvMachines] = useState([]);  // multiple machines for this service
   const [savingSvc, setSavingSvc] = useState(false);
   const [doneData,  setDoneData]  = useState(null); // response from /complete
 
@@ -307,9 +308,16 @@ export default function TechApp({ user, onLogout }) {
   async function saveService() {
     if (!sForm.serviceDetails.trim()) { toast("Kya kaam kiya — yeh zaroori hai ⚠️", "warning"); return; }
     setSavingSvc(true);
+    // Use first selected machine as primary
+    const primary = invMachines[0] || {};
+    const payload = {
+      ...sForm,
+      machineType:  primary.machineType  || sForm.machineType  || selected?.machineType  || "",
+      machineBrand: primary.machineBrand || sForm.machineBrand || selected?.machineBrand || "",
+    };
     try {
       const r = await apiFetch(`${API}/jobs/${selected.id}/complete`, {
-        method:"PUT", headers:authHeader(), body:JSON.stringify(sForm)
+        method:"PUT", headers:authHeader(), body:JSON.stringify(payload)
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || d.message || `Server ${r.status}`);
@@ -355,6 +363,7 @@ export default function TechApp({ user, onLogout }) {
     setDoneData(null);
     setInvoice(null);
     setSForm({serialNumber:"",serviceDate:today(),warrantyPeriod:"1 year",serviceDetails:"",machineType:"",machineBrand:""});
+    setInvMachines([]);
     setItems([row()]);
     setDiscount(""); setPayment("Cash");
     setScreen("detail");
@@ -435,8 +444,11 @@ export default function TechApp({ user, onLogout }) {
   }
 
   const hasWarranty = sForm.warrantyPeriod !== "No Warranty";
-  const emergency   = jobs.filter(j=>j.priority==="EMERGENCY");
-  const normal      = jobs.filter(j=>j.priority!=="EMERGENCY");
+  // Today's date in IST (India Standard Time) — en-CA gives YYYY-MM-DD format
+  const todayIST = new Date().toLocaleDateString("en-CA", { timeZone:"Asia/Kolkata" });
+  const todayJobs = jobs.filter(j => j.scheduledDate === todayIST);
+  const emergency   = todayJobs.filter(j=>j.priority==="EMERGENCY");
+  const normal      = todayJobs.filter(j=>j.priority!=="EMERGENCY");
 
   // ════════════════════════════════════════════════════════════
   // HOME
@@ -485,7 +497,7 @@ export default function TechApp({ user, onLogout }) {
       </div>
 
       <div className="tech-mob-stats">
-        <Stat num={jobs.length}          label="Active" />
+        <Stat num={todayJobs.length}     label="Aaj Ke Jobs" />
         <div className="tech-mob-stat-divider"/>
         <Stat num={emergency.length}     label="Emergency" color="#ef4444"/>
         <div className="tech-mob-stat-divider"/>
@@ -623,48 +635,71 @@ export default function TechApp({ user, onLogout }) {
 
               <InfoBox color="#8b5cf6" text="Service ki details bhar do — customer record mein save hoga aur aage invoice aayega"/>
 
-              {/* Machine selection — customer ki registered machine + nai add karne ka option */}
+              {/* Multiple Machines — customer ki registered + manual add */}
               <div style={{background:"rgba(59,130,246,0.05)",border:"1px solid rgba(59,130,246,0.15)",borderRadius:10,padding:"10px 12px"}}>
-                <div style={{fontSize:11,fontWeight:800,color:"#3b82f6",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:8}}>🔧 Kis Machine Ka Kaam?</div>
-                {/* Show customer's existing machine if available */}
-                {(selected?.customer?.machineType || selected?.machineType) && (
-                  <button
-                    onClick={()=>setSForm(f=>({...f,
-                      machineType: f.machineType ? "" : (selected?.customer?.machineType||selected?.machineType||""),
-                      machineBrand: f.machineType ? "" : (selected?.customer?.machineBrand||selected?.machineBrand||""),
-                    }))}
-                    style={{width:"100%",padding:"8px 12px",borderRadius:8,marginBottom:8,cursor:"pointer",
-                      fontWeight:700,fontSize:13,textAlign:"left",
-                      background: sForm.machineType===(selected?.customer?.machineType||selected?.machineType)
-                        ? "rgba(59,130,246,0.15)" : "#fff",
-                      border: sForm.machineType===(selected?.customer?.machineType||selected?.machineType)
-                        ? "2px solid #3b82f6" : "1.5px solid #e2e8f0",
-                      color:"#1e293b"}}>
-                    {sForm.machineType===(selected?.customer?.machineType||selected?.machineType) ? "✅ " : ""}
-                    🖥️ {selected?.customer?.machineType||selected?.machineType} — {selected?.customer?.machineBrand||selected?.machineBrand||""}
-                  </button>
-                )}
-                {/* Manual type/brand */}
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                  <div>
-                    <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",marginBottom:4}}>Type</div>
-                    <select className="tech-inv-input"
-                      value={sForm.machineType}
-                      onChange={e=>setSForm(f=>({...f,machineType:e.target.value,machineBrand:""}))}>
-                      <option value="">-- Select --</option>
+                <div style={{fontSize:11,fontWeight:800,color:"#3b82f6",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:8}}>🔧 Machines (Multiple Select Kar Sakte Ho)</div>
+
+                {/* Quick-select registered machine */}
+                {(selected?.customer?.machineType || selected?.machineType) && (()=>{
+                  const mt = selected?.customer?.machineType || selected?.machineType || "";
+                  const mb = selected?.customer?.machineBrand || selected?.machineBrand || "";
+                  const already = invMachines.some(m=>m.machineType===mt&&m.machineBrand===mb);
+                  return (
+                    <button onClick={()=>{
+                        if (already) setInvMachines(ms=>ms.filter(m=>!(m.machineType===mt&&m.machineBrand===mb)));
+                        else setInvMachines(ms=>[...ms,{machineType:mt,machineBrand:mb}]);
+                        // Also update primary sForm
+                        if (!already && invMachines.length===0) setSForm(f=>({...f,machineType:mt,machineBrand:mb}));
+                      }}
+                      style={{width:"100%",padding:"8px 12px",borderRadius:8,marginBottom:8,cursor:"pointer",
+                        fontWeight:700,fontSize:13,textAlign:"left",
+                        background:already?"rgba(59,130,246,0.15)":"#fff",
+                        border:already?"2px solid #3b82f6":"1.5px solid #e2e8f0",color:"#1e293b"}}>
+                      {already?"✅ ":"☐ "}🖥️ {mt}{mb?" — "+mb:""}
+                    </button>
+                  );
+                })()}
+
+                {/* Additional manual machine rows */}
+                {invMachines.filter(m=>
+                  !(m.machineType===(selected?.customer?.machineType||selected?.machineType) &&
+                    m.machineBrand===(selected?.customer?.machineBrand||selected?.machineBrand))
+                ).map((m,i)=>(
+                  <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:6,marginBottom:6}}>
+                    <select className="tech-inv-input" value={m.machineType}
+                      onChange={e=>{
+                        const updated=[...invMachines];
+                        const realIdx=invMachines.indexOf(m);
+                        updated[realIdx]={...m,machineType:e.target.value,machineBrand:""};
+                        setInvMachines(updated);
+                        if(realIdx===0) setSForm(f=>({...f,machineType:e.target.value,machineBrand:""}));
+                      }}>
+                      <option value="">Type</option>
                       {MACHINE_TYPES.map(t=><option key={t}>{t}</option>)}
                     </select>
-                  </div>
-                  <div>
-                    <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",marginBottom:4}}>Brand</div>
-                    <select className="tech-inv-input"
-                      value={sForm.machineBrand}
-                      onChange={e=>setSForm(f=>({...f,machineBrand:e.target.value}))}>
-                      <option value="">-- Select --</option>
-                      {(MACHINE_BRANDS[sForm.machineType]||MACHINE_BRANDS["Other"]).map(b=><option key={b}>{b}</option>)}
+                    <select className="tech-inv-input" value={m.machineBrand}
+                      onChange={e=>{
+                        const updated=[...invMachines];
+                        const realIdx=invMachines.indexOf(m);
+                        updated[realIdx]={...m,machineBrand:e.target.value};
+                        setInvMachines(updated);
+                      }}>
+                      <option value="">Brand</option>
+                      {(MACHINE_BRANDS[m.machineType]||MACHINE_BRANDS["Other"]).map(b=><option key={b}>{b}</option>)}
                     </select>
+                    <button onClick={()=>setInvMachines(ms=>ms.filter((_,idx2)=>invMachines.indexOf(m)!==invMachines.findIndex((_,x)=>x===invMachines.indexOf(m))))}
+                      style={{padding:"6px 8px",background:"rgba(239,68,68,0.1)",border:"none",
+                        borderRadius:6,color:"#ef4444",fontWeight:700,cursor:"pointer",fontSize:12}}>✕</button>
                   </div>
-                </div>
+                ))}
+
+                {/* Add more button */}
+                <button onClick={()=>setInvMachines(ms=>[...ms,{machineType:"",machineBrand:""}])}
+                  style={{width:"100%",padding:"6px",border:"1.5px dashed #3b82f6",
+                    background:"rgba(59,130,246,0.03)",color:"#3b82f6",
+                    borderRadius:8,fontWeight:700,fontSize:12,cursor:"pointer",marginTop:4}}>
+                  + Aur Machine Add Karo
+                </button>
               </div>
 
               <Field label="Serial Number (Optional)">

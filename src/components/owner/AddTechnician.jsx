@@ -183,21 +183,44 @@ export default function AddTechnician() {
 
   useEffect(() => { fetchAll(); }, []);
 
+  // Active time — recalculate every 30s so it stays live
+  useEffect(() => {
+    const t = setInterval(() => {
+      setTodayActive(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(id => {
+          if (updated[id].lastStatus === "ACTIVE") {
+            // Find the tech to get activeStartedAt
+            const tech = techs.find(t => String(t.id) === String(id));
+            if (tech?.activeStartedAt) {
+              const mins = Math.max(0, Math.floor((Date.now() - new Date(tech.activeStartedAt).getTime()) / 60000));
+              updated[id] = { ...updated[id], todayMins: mins };
+            }
+          }
+        });
+        return updated;
+      });
+    }, 30000);
+    return () => clearInterval(t);
+  }, [techs]);
+
   async function fetchAll() {
     setListLoad(true);
     try {
-      const [techData, invData, sessionData] = await Promise.all([
+      const [techData, invData] = await Promise.all([
         getTechnicians(),
         apiFetch(`${API}/invoices`, { headers:authHeader() }).then(r=>r.json()),
-        apiFetch(`${API}/tech-sessions/today`, { headers:authHeader() }).then(r=>r.ok?r.json():[]),
       ]);
       setTechs(techData);
       setAllInvoices(Array.isArray(invData) ? invData : []);
-      // Build todayActive map: techId → { todayMins, lastStatus }
+      // Compute activeMins from activeStartedAt field on User
       const activeMap = {};
-      if (Array.isArray(sessionData)) {
-        sessionData.forEach(s => { activeMap[s.techId] = s; });
-      }
+      techData.forEach(t => {
+        if (t.isActive && t.activeStartedAt) {
+          const mins = Math.max(0, Math.floor((Date.now() - new Date(t.activeStartedAt).getTime()) / 60000));
+          activeMap[t.id] = { todayMins: mins, lastStatus: "ACTIVE" };
+        }
+      });
       setTodayActive(activeMap);
     } catch(e) { console.error(e); }
     finally { setListLoad(false); }
