@@ -189,13 +189,9 @@ export default function AddTechnician() {
       setTodayActive(prev => {
         const updated = { ...prev };
         Object.keys(updated).forEach(id => {
-          if (updated[id].lastStatus === "ACTIVE") {
-            // Find the tech to get activeStartedAt
-            const tech = techs.find(t => String(t.id) === String(id));
-            if (tech?.activeStartedAt) {
-              const mins = Math.max(0, Math.floor((Date.now() - new Date(tech.activeStartedAt).getTime()) / 60000));
-              updated[id] = { ...updated[id], todayMins: mins };
-            }
+          if (updated[id].lastStatus === "ACTIVE" && updated[id].activeStartedAt) {
+            const sessionMins = Math.max(0, Math.floor((Date.now() - new Date(updated[id].activeStartedAt).getTime()) / 60000));
+            updated[id] = { ...updated[id], todayMins: (updated[id].base || 0) + sessionMins };
           }
         });
         return updated;
@@ -213,14 +209,17 @@ export default function AddTechnician() {
       ]);
       setTechs(techData);
       setAllInvoices(Array.isArray(invData) ? invData : []);
-      // Compute activeMins from activeStartedAt field on User
+      // Build activeMap from todayActiveMins (DB) + current session if active
       const activeMap = {};
       techData.forEach(t => {
-        // Only count as active if BOTH isActive=true AND activeStartedAt is set
-        // isActive alone isn't enough — default was true before, so old DB rows may still have it
+        const base = t.todayActiveMins || 0;  // already completed sessions today
         if (t.isActive && t.activeStartedAt) {
-          const mins = Math.max(0, Math.floor((Date.now() - new Date(t.activeStartedAt).getTime()) / 60000));
-          activeMap[t.id] = { todayMins: mins, lastStatus: "ACTIVE" };
+          // Currently active: base + current running session
+          const sessionMins = Math.max(0, Math.floor((Date.now() - new Date(t.activeStartedAt).getTime()) / 60000));
+          activeMap[t.id] = { todayMins: base + sessionMins, lastStatus: "ACTIVE", base, activeStartedAt: t.activeStartedAt };
+        } else if (base > 0) {
+          // Was active earlier today
+          activeMap[t.id] = { todayMins: base, lastStatus: "DONE" };
         }
       });
       setTodayActive(activeMap);
