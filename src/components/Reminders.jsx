@@ -66,8 +66,16 @@ export default function Reminders({ expiring, customers, onRefresh }) {
   const critical = filteredExpiring.filter(c => { const d = daysLeft(c.warrantyEnd); return d !== null && d <= 7; });
   const warning  = filteredExpiring.filter(c => { const d = daysLeft(c.warrantyEnd); return d !== null && d > 7 && d <= 30; });
 
+  // 3-month service due reminder — customers whose last serviceDate > 90 days ago
+  const serviceDue = customers.filter(c => {
+    if (!c.serviceDate) return false;
+    const daysSince = Math.floor((today - new Date(c.serviceDate)) / 86400000);
+    return daysSince >= 90;
+  }).sort((a,b) => new Date(a.serviceDate) - new Date(b.serviceDate)); // oldest first
+
   const tabs = [
     { id:"warranty", label:"Warranty Alerts",  count: expiring.length  },
+    { id:"service3m",label:"3-Month Service",   count: serviceDue.length },
     { id:"pending",  label:"Service Pending",   count: pending.length   },
     { id:"auto",     label:"Auto Reminders",    count: autoReminders.length },
   ];
@@ -143,6 +151,60 @@ export default function Reminders({ expiring, customers, onRefresh }) {
       )}
 
       {/* ── SERVICE PENDING TAB ── */}
+      {/* ── 3-MONTH SERVICE DUE TAB ── */}
+      {activeTab==="service3m" && (
+        <div>
+          {serviceDue.length === 0 ? (
+            <div style={{ textAlign:"center", padding:48, color:"#94a3b8" }}>
+              <div style={{ fontSize:40, marginBottom:10 }}>✅</div>
+              <div style={{ fontWeight:600 }}>Koi machine 3+ mahine purani nahi — sab theek hai!</div>
+            </div>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              <div style={{ padding:"10px 16px", background:"rgba(245,158,11,0.08)",
+                border:"1px solid rgba(245,158,11,0.2)", borderRadius:10, fontSize:13,
+                color:"#92400e", fontWeight:600 }}>
+                ⚠️ {serviceDue.length} customer(s) ki machine 3+ mahine se service nahi hui — reminder bhejo
+              </div>
+              {serviceDue.map(c => {
+                const daysSince = Math.floor((today - new Date(c.serviceDate)) / 86400000);
+                const months = Math.floor(daysSince / 30);
+                const waUrl = `https://wa.me/91${c.mobile}?text=${encodeURIComponent(
+                  `Namaste ${c.name} ji! 🙏\n\nAapki ${c.machineType||"machine"} (${c.machineBrand||""}) ki service ${months} mahine pehle hui thi.\n\nSahi performance ke liye regular service zaroori hai. Aaj hi booking karein! 😊\n\n📞 Matoshree Enterprises`
+                )}`;
+                return (
+                  <div key={c.id} style={{ background:"#fff", border:"1px solid #fed7aa",
+                    borderLeft:"4px solid #f59e0b", borderRadius:12, padding:"14px 16px",
+                    display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:800, fontSize:15, color:"#1e293b" }}>{c.name}</div>
+                      <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>
+                        📞 {c.mobile} · 🖥️ {c.machineType} {c.machineBrand}
+                      </div>
+                      <div style={{ fontSize:12, marginTop:4 }}>
+                        <span style={{ background:"rgba(245,158,11,0.12)", color:"#b45309",
+                          padding:"2px 8px", borderRadius:6, fontWeight:700 }}>
+                          ⏳ {months} mahine pehle — {daysSince} din
+                        </span>
+                        <span style={{ color:"#94a3b8", marginLeft:8, fontSize:11 }}>
+                          Last: {new Date(c.serviceDate).toLocaleDateString("en-IN")}
+                        </span>
+                      </div>
+                    </div>
+                    <a href={waUrl} target="_blank" rel="noreferrer"
+                      style={{ padding:"9px 18px", borderRadius:10, background:"#25D366",
+                        color:"#fff", fontWeight:700, fontSize:13, textDecoration:"none",
+                        whiteSpace:"nowrap", flexShrink:0 }}>
+                      💬 WA Bhejo
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab==="pending" && (
         <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:16, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,0.05)" }}>
           <div style={{ padding:"16px 20px", borderBottom:"1px solid #f1f5f9", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:10 }}>

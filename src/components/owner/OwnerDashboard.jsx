@@ -241,7 +241,7 @@ export default function OwnerDashboard({ customers, expiring, onNavigate }) {
                         </td>
                         <td style={{padding:"12px 14px"}}><span style={{fontWeight:800,color:col>0?"#059669":"#94a3b8",fontSize:15}}>{fmt(col)}</span></td>
                         <td style={{padding:"12px 14px"}}><span style={{fontWeight:700,color:pend>0?"#ef4444":"#10b981",padding:"3px 10px",background:pend>0?"rgba(239,68,68,0.08)":"rgba(16,185,129,0.08)",borderRadius:8}}>{fmt(pend)}</span></td>
-                        <td style={{padding:"12px 14px",fontWeight:700,color:"#10b981"}}>{t.doneJobs||0}</td>
+                        <td style={{padding:"12px 14px",fontWeight:700,color:"#10b981"}}>{techPeriod==="today"?(t.todayDoneJobs||0):techPeriod==="kal"?(t.yestDoneJobs||0):techPeriod==="week"?(t.weekDoneJobs||0):techPeriod==="month"?(t.monthDoneJobs||0):(t.doneJobs||0)}</td>
                         <td style={{padding:"12px 14px",fontWeight:700,color:"#f59e0b"}}>{t.activeJobs||0}</td>
                       </tr>
                     );

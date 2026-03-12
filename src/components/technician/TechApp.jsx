@@ -111,7 +111,7 @@ export default function TechApp({ user, onLogout }) {
       try {
         await Promise.all([
           apiFetch(`${API}/tech-sessions/start`, { method:"POST", headers:authHeader() }),
-          apiFetch(`${API}/users/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() }),
+          apiFetch(`${API}/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() }),
         ]);
       } catch(e) {}
     } else {
@@ -124,7 +124,7 @@ export default function TechApp({ user, onLogout }) {
         await Promise.all([
           apiFetch(`${API}/tech-sessions/end`, { method:"POST", headers:authHeader() }),
           fetch(`${API}/location`, { method:"DELETE", headers:authHeader() }),
-          apiFetch(`${API}/users/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() }),
+          apiFetch(`${API}/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() }),
         ]);
       } catch(e) {}
     }
