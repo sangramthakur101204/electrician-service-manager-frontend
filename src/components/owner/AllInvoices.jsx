@@ -1,4 +1,5 @@
 // src/components/owner/AllInvoices.jsx
+import { useSettings } from '../../hooks/useSettings.js';
 import { useState, useEffect, useMemo } from "react";
 import { useToast, confirm } from "../Toast.jsx";
 import { authHeader, downloadInvoicePdf , apiFetch } from "../../services/api";
@@ -15,6 +16,8 @@ const lbl = { display:"block", fontSize:11, fontWeight:700, color:"#64748b", tex
 const sel = { width:"100%", padding:"10px 14px", borderRadius:10, border:"1.5px solid #e2e8f0", fontSize:13, fontFamily:"inherit", color:"#1e293b", background:"#fff", outline:"none", boxSizing:"border-box" };
 
 export default function AllInvoices() {
+  const { settings } = useSettings();
+  const compName = settings?.companyName || "Matoshree Enterprises";
   const toast = useToast();
   const [invoices,    setInvoices]    = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -257,7 +260,7 @@ export default function AllInvoices() {
                   </>}
                   <button onClick={()=>downloadInvoicePdf(inv.id,inv.customer?.name,inv.invoiceNumber)} style={actionBtn("#6366f1","rgba(99,102,241,0.08)")}>📄 PDF</button>
                   {inv.customer?.mobile && (
-                    <a href={`https://wa.me/91${inv.customer.mobile}?text=${encodeURIComponent(`Namaste ${inv.customer?.name||""} ji! Aapka invoice ${inv.invoiceNumber} — Total: ${fmt(inv.totalAmount)}. - Matoshree Enterprises`)}`}
+                    <a href={`https://wa.me/91${inv.customer.mobile}?text=${encodeURIComponent(`Namaste ${inv.customer?.name||""} ji! 🙏\n\nAapka invoice ${inv.invoiceNumber}\n💰 Total: ${fmt(inv.totalAmount)}\n\nDhanyawad! 🙏\n— ${compName}`)}`}
                       target="_blank" rel="noreferrer"
                       style={{...actionBtn("#25d366","rgba(37,211,102,0.08)"),textDecoration:"none"}}>💬 WA</a>
                   )}

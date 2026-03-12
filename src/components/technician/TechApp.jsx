@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { authHeader, downloadInvoicePdf, sendLocation , apiFetch } from "../../services/api";
 import { useToast } from "../Toast.jsx";
+import { useSettings } from "../../hooks/useSettings.js";
 import { generateWarrantyCard } from "../WarrantyCard";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -50,6 +51,25 @@ const fmt = n => "₹" + Number(n||0).toLocaleString("en-IN");
 
 export default function TechApp({ user, onLogout }) {
   const toast = useToast();
+  const { settings } = useSettings();
+  const compName = () => settings?.companyName || "Matoshree Enterprises";
+
+  // Build WA footer from settings
+  function buildFooter() {
+    const parts = [];
+    if (settings?.companyPhone)  parts.push(`📞 ${settings.companyPhone}`);
+    if (settings?.companyPhone2) parts.push(`📞 ${settings.companyPhone2}`);
+    if (settings?.companyEmail)  parts.push(`✉️ ${settings.companyEmail}`);
+    if (settings?.companyAddress) {
+      parts.push(`📍 ${settings.companyAddress}`);
+      parts.push(`🗺️ https://maps.google.com/?q=${encodeURIComponent(settings.companyAddress)}`);
+    }
+    try {
+      const links = JSON.parse(settings?.linksJson || "[]");
+      links.filter(l=>l.url).forEach(l => parts.push(`🔗 ${l.label ? l.label+": " : ""}${l.url}`));
+    } catch(e) {}
+    return parts.length > 0 ? ("\n\n" + parts.join("\n")) : "";
+  }
   const [screen,   setScreen]   = useState("home");
   const [jobs,     setJobs]     = useState([]);
   const [history,  setHistory]  = useState([]);
@@ -401,7 +421,7 @@ export default function TechApp({ user, onLogout }) {
       (hasW ? `🛡️ *Warranty: ${sForm.warrantyPeriod}*\n` : "")+
       `✅ Kaam kiya: ${sForm.serviceDetails}\n\n`+
       `Dhanyawad aapka! Koi bhi problem pe hume call karein. 🙏\n`+
-      `— *${user?.name}*, Matoshree Enterprises`;
+      `— *${user?.name}*, ${compName()}${buildFooter()}`;
     return `https://wa.me/91${mob}?text=${encodeURIComponent(msg)}`;
   }
 
@@ -425,7 +445,7 @@ export default function TechApp({ user, onLogout }) {
       `${divider}\n\n`+
       `⚠️ Warranty sirf normal use ke liye valid hai.\n`+
       `Warranty claim ke liye humara number save karein.\n\n`+
-      `— *Matoshree Enterprises*`;
+      `— *${compName()}*${buildFooter()}`;
     return `https://wa.me/91${mob}?text=${encodeURIComponent(msg)}`;
   }
 
@@ -612,7 +632,7 @@ export default function TechApp({ user, onLogout }) {
               )}
 
               {!done && mob && (
-                <a href={`https://wa.me/91${mob}?text=${encodeURIComponent(`Namaste! Main ${user?.name} hoon, Matoshree Enterprises se. Aapka ${selected.machineType||"machine"} dekhne aa raha hoon.`)}`}
+                <a href={`https://wa.me/91${mob}?text=${encodeURIComponent(`Namaste ${selected.customerName||selected.customer?.name||""} ji! 🙏\n\nMain ${user?.name} hoon, ${compName()} se.\nAapka ${selected.machineType||"machine"} dekhne aa raha hoon. 🔧\n\nThodi der mein pahunch jaunga!${buildFooter()}`)}`}
                   target="_blank" rel="noreferrer" className="tech-detail-wa-btn">
                   💬 Customer ko WhatsApp Karo
                 </a>
