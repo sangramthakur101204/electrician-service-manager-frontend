@@ -91,18 +91,27 @@ export default function TechApp({ user, onLogout }) {
       setActiveStart(new Date(now));
       setActiveMins(0);
       toast("✅ Active ho gaye! GPS tracking shuru", "success");
+      // Backend: start session + toggle active
+      try {
+        await Promise.all([
+          apiFetch(`${API}/tech-sessions/start`, { method:"POST", headers:authHeader() }),
+          apiFetch(`${API}/users/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() }),
+        ]);
+      } catch(e) {}
     } else {
       localStorage.removeItem(`tech_active_start_${user?.id}`);
       setActiveStart(null);
       setActiveMins(0);
-      // Remove location on going inactive
-      try { await fetch(`${API}/location`, { method:"DELETE", headers:authHeader() }); } catch(e){}
       toast("⏸️ Inactive ho gaye", "info");
+      // Backend: end session + clear location + toggle inactive
+      try {
+        await Promise.all([
+          apiFetch(`${API}/tech-sessions/end`, { method:"POST", headers:authHeader() }),
+          fetch(`${API}/location`, { method:"DELETE", headers:authHeader() }),
+          apiFetch(`${API}/users/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() }),
+        ]);
+      } catch(e) {}
     }
-    // Sync with backend
-    try {
-      await apiFetch(`${API}/users/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() });
-    } catch(e) {}
   };
 
   function fmtActiveMins(mins) {

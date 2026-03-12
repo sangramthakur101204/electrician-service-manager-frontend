@@ -102,28 +102,33 @@ export default function LiveTracking({ onNavigate }) {
   function makeTechIcon(loc, status, isSelected) {
     const m    = getMeta(status);
     const init = (loc.name || "T")[0].toUpperCase();
-    const w    = isSelected ? 94 : 82;
+    const name = (loc.name || "Tech");
+    const shortName = name.length > 8 ? name.slice(0,7) + "\u2026" : name;
+    const pulse = (status !== "FREE" && status !== "OFFLINE")
+      ? `<div style="position:absolute;inset:-4px;border-radius:50%;border:2px solid ${m.color};opacity:0.4;animation:livePulse 2s ease-out infinite;"></div>`
+      : "";
     const html = `
-      <div style="font-family:system-ui,sans-serif;position:relative;width:${w}px;cursor:pointer;">
-        <div style="background:#fff;border:${isSelected?"3px":"2px"} solid ${m.color};
-          border-radius:14px;padding:6px 8px 5px;text-align:center;
-          box-shadow:0 ${isSelected?"8px 24px":"4px 14px"} ${m.color}${isSelected?"50":"28"},0 2px 6px rgba(0,0,0,0.1);
-          transform:${isSelected?"scale(1.06)":"scale(1)"};transition:all 0.2s;">
-          <div style="width:30px;height:30px;border-radius:50%;margin:0 auto 3px;
-            background:linear-gradient(135deg,${m.color},${m.color}aa);
-            color:#fff;font-weight:900;font-size:13px;
-            display:flex;align-items:center;justify-content:center;">${init}</div>
-          <div style="font-size:10px;font-weight:800;color:#1e293b;
-            white-space:nowrap;overflow:hidden;max-width:70px;text-overflow:ellipsis;">${loc.name}</div>
-          <div style="display:inline-block;margin-top:2px;padding:1px 6px;border-radius:20px;
-            background:${m.bg};color:${m.color};font-size:9px;font-weight:700;white-space:nowrap;">
-            ${m.emoji} ${m.label}</div>
+      <div style="width:64px;font-family:system-ui,sans-serif;position:relative;cursor:pointer;
+        filter:drop-shadow(0 3px 8px rgba(0,0,0,0.16));">
+        <div style="background:#fff;border-radius:12px;padding:6px 5px 5px;text-align:center;
+          border:${isSelected ? "3px" : "2px"} solid ${m.color};">
+          <div style="position:relative;width:34px;height:34px;margin:0 auto 3px;">
+            ${pulse}
+            <div style="width:34px;height:34px;border-radius:50%;
+              background:linear-gradient(135deg,${m.color},${m.color}bb);
+              color:#fff;font-weight:900;font-size:14px;
+              display:flex;align-items:center;justify-content:center;">${init}</div>
+          </div>
+          <div style="font-size:9px;font-weight:800;color:#1e293b;
+            white-space:nowrap;width:54px;text-align:center;overflow:hidden;">${shortName}</div>
+          <div style="margin-top:2px;display:inline-block;width:7px;height:7px;border-radius:50%;
+            background:${m.color};box-shadow:0 0 0 2px ${m.color}30;"></div>
         </div>
-        <div style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);
-          width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;
-          border-top:7px solid ${m.color};"></div>
+        <div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
+          width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;
+          border-top:6px solid ${m.color};"></div>
       </div>`;
-    return window.L.divIcon({ html, className:"", iconSize:[w, 80], iconAnchor:[w/2, 87], popupAnchor:[0,-92] });
+    return window.L.divIcon({ html, className:"", iconSize:[64,80], iconAnchor:[32,86], popupAnchor:[0,-90] });
   }
 
   function updateMarkers() {

@@ -156,8 +156,11 @@ export default function JobAssign() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Job create nahi hua");
 
-      if (data.whatsappUrl) setWaUrl(data.whatsappUrl);
-      else { setShowForm(false); resetForm(); }
+      if (data.whatsappUrl) {
+        setShowForm(false);
+        resetForm();
+        setWaUrl(data.whatsappUrl);
+      } else { setShowForm(false); resetForm(); }
       fetchAll();
     } catch (e) { toast(e.message, "error"); }
     finally { setLoading(false); }
@@ -647,7 +650,7 @@ export default function JobAssign() {
 
       {/* WhatsApp popup — after job create */}
       {waUrl && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:300 }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10001 }}>
           <div style={{ background:"#fff", borderRadius:20, padding:32, maxWidth:380, width:"90%", textAlign:"center", boxShadow:"0 24px 64px rgba(0,0,0,0.2)" }}>
             <div style={{ fontSize:56, marginBottom:12 }}>✅</div>
             <h3 style={{ fontSize:20, fontWeight:800, marginBottom:8 }}>Job Create Ho Gaya!</h3>
@@ -690,7 +693,7 @@ export default function JobAssign() {
 
       {/* Auto-WA popup — after technician assigned, send to CUSTOMER */}
       {assignWaUrl && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:300 }}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.55)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:10001 }}>
           <div style={{ background:"#fff", borderRadius:20, padding:28, maxWidth:380, width:"90%", textAlign:"center", boxShadow:"0 24px 64px rgba(0,0,0,0.2)" }}>
             <div style={{ fontSize:48, marginBottom:10 }}>🎉</div>
             <h3 style={{ fontSize:18, fontWeight:800, marginBottom:6 }}>Technician Assign Ho Gaya!</h3>
