@@ -80,13 +80,35 @@ export default function TechApp({ user, onLogout }) {
 
   const [gpsStatus, setGpsStatus] = useState("starting"); // "starting" | "ok" | "error"
   const [isActive,  setIsActive]  = useState(() => {
-    // Persist active state in localStorage
+    // Initial value from localStorage — will be corrected from DB in useEffect below
     return localStorage.getItem(`tech_active_${user?.id}`) === "true";
   });
   const [activeStart, setActiveStart] = useState(() => {
     const s = localStorage.getItem(`tech_active_start_${user?.id}`);
     return s ? new Date(s) : null;
   });
+
+  // ── SYNC ACTIVE STATE FROM DB ON MOUNT ──────────────────────────────────────
+  // localStorage can be stale — always trust DB as source of truth
+  useEffect(() => {
+    apiFetch(`${API}/auth/me`, { headers: authHeader() })
+      .then(r => r.ok ? r.json() : null)
+      .then(me => {
+        if (!me) return;
+        const dbActive = Boolean(me.isActive);
+        setIsActive(dbActive);
+        localStorage.setItem(`tech_active_${user?.id}`, String(dbActive));
+        if (dbActive && me.activeStartedAt) {
+          const start = new Date(me.activeStartedAt);
+          setActiveStart(start);
+          localStorage.setItem(`tech_active_start_${user?.id}`, start.toISOString());
+        } else if (!dbActive) {
+          setActiveStart(null);
+          localStorage.removeItem(`tech_active_start_${user?.id}`);
+        }
+      })
+      .catch(() => {}); // fallback to localStorage if API fails
+  }, []);
   // Init from activeStart so page refresh pe zero nahi hoga
   const [activeMins, setActiveMins] = useState(0);
 
