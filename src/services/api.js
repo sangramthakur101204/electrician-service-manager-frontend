@@ -1,7 +1,9 @@
 // src/services/api.js
 import { toast } from "../components/Toast.jsx";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
+// APK ke liye: VITE_API_URL build time pe set hona chahiye
+// Fallback: apna Railway URL yahan daalo
+const API = import.meta.env.VITE_API_URL || "https://YOUR-RAILWAY-URL.railway.app";
 export const BASE_URL = `${API}/customers`;
 
 // ── Auth Helper ───────────────────────────────────────────────────────────────
@@ -207,12 +209,16 @@ export const downloadInvoicePdf = async (invoiceId, customerName, invoiceNumber)
   const res = await apiFetch(`${API}/invoices/${invoiceId}/pdf`, { headers: authHeader() });
   if (!res.ok) throw new Error("PDF download karne mein error");
   const blob = await res.blob();
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
+  const filename = `Invoice_${customerName?.replace(/\s+/g,"_")}_${invoiceNumber}.pdf`;
+  // Capacitor-safe download
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement("a");
   a.href = url;
-  a.download = `Invoice_${customerName?.replace(/\s+/g,"_")}_${invoiceNumber}.pdf`;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 3000);
 };
 
 // Returns PDF as Blob — for Web Share API (WhatsApp pe share karo)

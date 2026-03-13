@@ -1,4 +1,5 @@
 // src/components/CustomerList.jsx
+import { openExternal, downloadBlob } from "../utils/openExternal";
 import { useState } from "react";
 import {
   markServiceDone, deleteCustomer,
@@ -73,9 +74,8 @@ export default function CustomerList({ customers, onRefresh }) {
       const csv = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
       const blob = new Blob(["\uFEFF"+csv], { type:"text/csv;charset=utf-8;" });
       const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href = url; a.download = `ElectroServe_Customers_${new Date().toLocaleDateString("en-IN").replace(/\//g,"-")}.csv`;
-      a.click(); URL.revokeObjectURL(url);
+      downloadBlob(blob, `ElectroServe_Customers_${new Date().toLocaleDateString("en-IN").replace(/\//g,"-")}.csv`);
+      URL.revokeObjectURL(url);
     } catch(e) { toast("Export error: " + e.message, "error"); }
     finally { setExporting(false); }
   };
@@ -128,8 +128,9 @@ export default function CustomerList({ customers, onRefresh }) {
         <script>window.onload=()=>{window.print();}<\/script>
         </body></html>`;
 
-      const w = window.open("","_blank");
-      w.document.write(html); w.document.close();
+      // APK safe — blob download instead of popup
+      const blob = new Blob([html], { type: "text/html;charset=utf-8;" });
+      downloadBlob(blob, `CustomerReport_${new Date().toLocaleDateString("en-IN").replace(/\//g,"-")}.html`);
     } catch(e) { toast("PDF error: " + e.message, "error"); }
     finally { setExporting(false); }
   };
@@ -183,9 +184,9 @@ export default function CustomerList({ customers, onRefresh }) {
 
   const openMap = c => {
     if (c.latitude && c.longitude) {
-      window.open(`https://www.google.com/maps?q=${c.latitude},${c.longitude}`, "_blank");
+      openExternal(`https://www.google.com/maps?q=${c.latitude},${c.longitude}`);
     } else if (c.address) {
-      window.open(`https://www.google.com/maps/search/${encodeURIComponent(c.address)}`, "_blank");
+      openExternal(`https://www.google.com/maps/search/${encodeURIComponent(c.address)}`);
     } else {
       toast("Koi location data nahi hai.", "warning");
     }
@@ -211,7 +212,7 @@ export default function CustomerList({ customers, onRefresh }) {
       if (type === "thankyou")  link = await getWhatsAppLink(id);
       if (type === "reminder")  link = await getWhatsAppReminderLink(id);
       if (type === "warranty")  link = await getWhatsAppWarrantyLink(id);
-      window.open(link, "_blank");
+      openExternal(link);
     } catch (e) { toast(e.message, "error"); }
   };
 

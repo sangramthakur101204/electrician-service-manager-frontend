@@ -1,7 +1,7 @@
 // src/components/technician/TechApp.jsx
+import { openExternal, downloadBlob } from "../../utils/openExternal";
 import { useState, useEffect } from "react";
 import { authHeader, downloadInvoicePdf, getInvoicePdfBlob, sendLocation, apiFetch } from "../../services/api";
-import { useSettings } from "../../hooks/useSettings.js";
 import { useToast } from "../Toast.jsx";
 import { generateWarrantyCard, generateWarrantyCardBlob } from "../WarrantyCard";
 
@@ -81,7 +81,6 @@ export default function TechApp({ user, onLogout }) {
   const [newJobAlert, setNewJobAlert] = useState(null); // {jobId, customerName, machineType, priority}
 
   const [gpsStatus, setGpsStatus] = useState("starting"); // "starting" | "ok" | "error"
-  const { settings: hookSettings, buildFooter: hookBuildFooter } = useSettings();
   const [isActive,  setIsActive]  = useState(() => {
     // Initial value from localStorage — will be corrected from DB in useEffect below
     return localStorage.getItem(`tech_active_${user?.id}`) === "true";
@@ -295,7 +294,10 @@ export default function TechApp({ user, onLogout }) {
   useEffect(() => {
     loadJobs();
     // Fetch company settings for footer in WhatsApp messages
-    // settings loaded via useSettings hook
+    apiFetch(`${API}/settings`, { headers: authHeader() })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setCompanySettings(d); })
+      .catch(() => {});
   }, []);
 
   // ── SSE — Real-time new job notifications ─────────────────────────────────
@@ -467,7 +469,7 @@ export default function TechApp({ user, onLogout }) {
     const cust = doneData?.customer || selected?.customer;
     const mob  = cust?.mobile || selected?.customerMobile;
     if (!mob || !invoice) return null;
-    const co = hookSettings?.companyName || "Matoshree Enterprises";
+    const co = companySettings?.companyName || "Matoshree Enterprises";
     const itemLines = invoice.items?.map(i=>`  • ${i.serviceName}: ₹${Number(i.totalPrice||0).toLocaleString("en-IN")}`).join("\n")||"";
     const paid  = payment==="Pending" ? "⏳ Payment Pending" : `✅ ${payment} se Payment Received`;
     const hasW  = sForm.warrantyPeriod !== "No Warranty";
@@ -508,7 +510,7 @@ export default function TechApp({ user, onLogout }) {
     const cust = doneData?.customer || selected?.customer;
     const mob  = cust?.mobile || selected?.customerMobile;
     if (!mob) return null;
-    const co = hookSettings?.companyName || "Matoshree Enterprises";
+    const co = companySettings?.companyName || "Matoshree Enterprises";
     const divider = "━━━━━━━━━━━━━━━━━━━━━";
 
     // Build footer from company settings
@@ -566,12 +568,12 @@ export default function TechApp({ user, onLogout }) {
       warrantyEnd:    warrantyEnd,
       serviceDetails: sForm.serviceDetails,
       technicianName: user?.name || "",
-      companyName:    hookSettings?.companyName    || "Matoshree Enterprises",
-      companyPhone:   hookSettings?.companyPhone   || "",
-      companyPhone2:  hookSettings?.companyPhone2  || "",
-      companyEmail:   hookSettings?.companyEmail   || "",
-      companyAddress: hookSettings?.companyAddress || "",
-      signatureBase64:hookSettings?.signatureBase64 || null,
+      companyName:    companySettings?.companyName    || "Matoshree Enterprises",
+      companyPhone:   companySettings?.companyPhone   || "",
+      companyPhone2:  companySettings?.companyPhone2  || "",
+      companyEmail:   companySettings?.companyEmail   || "",
+      companyAddress: companySettings?.companyAddress || "",
+      signatureBase64:companySettings?.signatureBase64 || null,
     };
   }
 
@@ -786,8 +788,7 @@ export default function TechApp({ user, onLogout }) {
               )}
 
               {!done && mob && (
-                <a href={`https://wa.me/91${mob}?text=${encodeURIComponent(`Namaste! Main ${user?.name} hoon, ${hookSettings?.companyName||"ElectroServe"} se. Aapka ${selected.machineType||"machine"} dekhne aa raha hoon.`)}`}
-                  target="_blank" rel="noreferrer" className="tech-detail-wa-btn">
+                <a href="#" onClick={(e)=>{e.preventDefault();openExternal("https://wa.me/91"+mob+"?text="+encodeURIComponent("Namaste! Main "+(user?.name||"")+" hoon, "+(companySettings?.companyName||"ElectroServe")+" se. Aapka "+(selected.machineType||"machine")+" dekhne aa raha hoon."))}} className="tech-detail-wa-btn">
                   💬 Customer ko WhatsApp Karo
                 </a>
               )}
@@ -1006,7 +1007,7 @@ export default function TechApp({ user, onLogout }) {
                            || selected?.customerMobile || doneData?.customerMobile || "";
             const mob      = rawMob.toString().replace(/\D/g,"").replace(/^91/,"").slice(-10);
             const custName = custObj?.name || selected?.customerName || "";
-            const co       = hookSettings?.companyName || "Matoshree Enterprises";
+            const co       = companySettings?.companyName || "Matoshree Enterprises";
             return (
               <div style={{padding:"16px"}}>
 
@@ -1035,10 +1036,10 @@ export default function TechApp({ user, onLogout }) {
                         (sForm.warrantyPeriod !== "No Warranty" ? "🛡️ Warranty: *" + sForm.warrantyPeriod + "*\n" : "") +
                         "\nKoi bhi problem ho toh zaroor call karein. 😊\n" +
                         "— *" + co + "*" +
-                        (hookSettings?.companyPhone   ? "\n📞 " + companySettings.companyPhone   : "") +
-                        (hookSettings?.companyPhone2  ? "\n📞 " + companySettings.companyPhone2  : "") +
-                        (hookSettings?.companyEmail   ? "\n✉️ " + companySettings.companyEmail   : "") +
-                        (hookSettings?.companyAddress ? "\n📍 " + companySettings.companyAddress : "")
+                        (companySettings?.companyPhone   ? "\n📞 " + companySettings.companyPhone   : "") +
+                        (companySettings?.companyPhone2  ? "\n📞 " + companySettings.companyPhone2  : "") +
+                        (companySettings?.companyEmail   ? "\n✉️ " + companySettings.companyEmail   : "") +
+                        (companySettings?.companyAddress ? "\n📍 " + companySettings.companyAddress : "")
                       )}`}
                       bg="linear-gradient(135deg,#25d366,#128c7e)" textColor="#fff"
                       icon="💬" label="Thank You Message — WhatsApp pe Bhejo"
@@ -1062,11 +1063,15 @@ export default function TechApp({ user, onLogout }) {
                           "Invoice PDF attached hai.\n\n" +
                           "💰 *Total: ₹" + Number(invoice.totalAmount||0).toLocaleString("en-IN") + "*\n" +
                           "— *" + co + "*";
-                        if (navigator.share && navigator.canShare({ files:[file] })) {
+                        const canShareInv = !!(navigator.share && navigator.canShare && navigator.canShare({ files:[file] }));
+                        if (canShareInv) {
                           await navigator.share({ files:[file], text: invMsg, title:"Invoice " + invoice.invoiceNumber });
                         } else {
                           downloadInvoicePdf(invoice.id, custName, invoice.invoiceNumber);
-                          if (mob) setTimeout(() => window.open("https://wa.me/91" + mob + "?text=" + encodeURIComponent(invMsg), "_blank"), 1500);
+                          if (mob) {
+                            const waInv = "https://wa.me/91" + mob + "?text=" + encodeURIComponent(invMsg);
+                            setTimeout(() => { openExternal(waInv); }, 1500);
+                          }
                         }
                       } catch(e) {
                         downloadInvoicePdf(invoice.id, custName, invoice.invoiceNumber);
@@ -1091,11 +1096,15 @@ export default function TechApp({ user, onLogout }) {
                             "Aapki warranty card attached hai. 👆\n\n" +
                             "✅ Warranty: *" + sForm.warrantyPeriod + "*\n" +
                             "— *" + co + "*";
-                          if (navigator.share && navigator.canShare({ files:[file] })) {
+                          const canShareWar = !!(navigator.share && navigator.canShare && navigator.canShare({ files:[file] }));
+                          if (canShareWar) {
                             await navigator.share({ files:[file], text: warMsg, title:"Warranty Card" });
                           } else {
                             generateWarrantyCard(warrantyObj);
-                            if (mob) setTimeout(() => window.open("https://wa.me/91" + mob + "?text=" + encodeURIComponent(warMsg), "_blank"), 1500);
+                            if (mob) {
+                              const waWar = "https://wa.me/91" + mob + "?text=" + encodeURIComponent(warMsg);
+                              setTimeout(() => { openExternal(waWar); }, 1500);
+                            }
                           }
                         } catch(e) {
                           generateWarrantyCard(getWarrantyCustomerObj());
@@ -1206,12 +1215,12 @@ export default function TechApp({ user, onLogout }) {
                         warrantyEnd: job.customer?.warrantyEnd||"",
                         serviceDetails: job.problemDescription||"",
                         technicianName: user?.name||"",
-                        companyName: hookSettings?.companyName||"ElectroServe",
-                        companyPhone: hookSettings?.companyPhone||"",
-                        companyPhone2: hookSettings?.companyPhone2||"",
-                        companyEmail: hookSettings?.companyEmail||"",
-                        companyAddress: hookSettings?.companyAddress||"",
-                        signatureBase64: hookSettings?.signatureBase64||null,
+                        companyName: companySettings?.companyName||"ElectroServe",
+                        companyPhone: companySettings?.companyPhone||"",
+                        companyPhone2: companySettings?.companyPhone2||"",
+                        companyEmail: companySettings?.companyEmail||"",
+                        companyAddress: companySettings?.companyAddress||"",
+                        signatureBase64: companySettings?.signatureBase64||null,
                       };
                       generateWarrantyCard(custObj);
                     }}

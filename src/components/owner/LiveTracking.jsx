@@ -252,7 +252,9 @@ export default function LiveTracking({ onNavigate }) {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:12,
-      height: isMob ? "auto" : "calc(100vh - 130px)", minHeight: isMob ? "auto" : 520 }}>
+      height: isMob ? "calc(100vh - 62px - 52px - 24px)" : "calc(100vh - 130px)",
+      minHeight: isMob ? "auto" : 520,
+      paddingBottom: isMob ? "0" : 0 }}>
 
       {/* Pulse CSS */}
       <style>{`
@@ -423,7 +425,7 @@ export default function LiveTracking({ onNavigate }) {
             </div>
           ) : (
             <>
-              <div ref={mapRef} style={{height:"100%",width:"100%",minHeight:isMob?360:0}}/>
+              <div ref={mapRef} style={{height:isMob?"calc(100vh - 62px - 52px - 220px)":"100%",width:"100%",minHeight:isMob?280:0}}/>
 
               {/* Legend */}
               <div style={{position:"absolute",bottom:16,left:16,zIndex:1000,

@@ -1,4 +1,5 @@
 // src/components/owner/JobAssign.jsx
+import { openExternal, downloadBlob } from "../utils/openExternal";
 import { useState, useEffect, useRef } from "react";
 import { getTechnicians, getAllCustomers, getLiveLocations, authHeader, apiFetch } from "../../services/api";
 import { useToast, confirm } from "../Toast.jsx";
@@ -79,6 +80,35 @@ export default function JobAssign() {
   );
 
   useEffect(() => { fetchAll(); }, []);
+
+  // Real-time tech online/offline via SSE
+  useEffect(() => {
+    const token = localStorage.getItem("token") || "";
+    let es;
+    function connect() {
+      es = new EventSource(`${API}/sse/tech-status?token=${encodeURIComponent(token)}`);
+      es.addEventListener("status", (e) => {
+        try {
+          const list = JSON.parse(e.data);
+          setTechnicians(prev => prev.map(t => {
+            const found = list.find(s => s.id === t.id);
+            return found ? { ...t, isActive: found.isOnline } : t;
+          }));
+        } catch {}
+      });
+      es.addEventListener("update", (e) => {
+        try {
+          const upd = JSON.parse(e.data);
+          setTechnicians(prev => prev.map(t =>
+            t.id === upd.id ? { ...t, isActive: upd.isOnline } : t
+          ));
+        } catch {}
+      });
+      es.onerror = () => { es.close(); setTimeout(connect, 5000); };
+    }
+    connect();
+    return () => es && es.close();
+  }, []);
 
   const fetchAll = async () => {
     setListLoading(true);
@@ -383,7 +413,7 @@ export default function JobAssign() {
                           </>
                         )}
                         <div
-                          onClick={() => { setIsNewCus(true); setShowCusDrop(false); if (!/^\d/.test(cusSearch)) set("customerName", cusSearch); else set("customerMobile", cusSearch); }}
+                          onClick={() => { const v = cusSearch; setIsNewCus(true); setShowCusDrop(false); setCusSearch(""); if (!/^\d/.test(v)) set("customerName", v); else set("customerMobile", v); }}
                           style={{ padding:"12px 16px", cursor:"pointer", background:"rgba(59,130,246,0.04)", borderTop: filteredCustomers.length>0 ? "1.5px dashed #bfdbfe" : "none", color:"#3b82f6", fontWeight:700, fontSize:13 }}
                           onMouseEnter={e=>e.currentTarget.style.background="rgba(59,130,246,0.1)"}
                           onMouseLeave={e=>e.currentTarget.style.background="rgba(59,130,246,0.04)"}>
@@ -899,7 +929,7 @@ function JobCard({ job, onDelete, onCancel, technicians = [], jobs = [], onAssig
         <div style={{ display:"flex", gap:8, alignItems:"center", marginTop: isOwnerActionable ? 8 : 0 }}>
           {mobile && (
             <a href={"https://wa.me/91"+mobile+"?text="+encodeURIComponent("Aapki service ki update — "+(companySettings?.companyName||"Matoshree Enterprises"))}
-              target="_blank" rel="noreferrer"
+              target="_blank" onClick={(e)=>{e.preventDefault();openExternal(e.currentTarget.href)}} rel="noreferrer"
               style={{ padding:"6px 12px", background:"rgba(37,211,102,0.1)", color:"#25d366", borderRadius:8, fontSize:12, fontWeight:600, textDecoration:"none" }}>
               💬 WA
             </a>

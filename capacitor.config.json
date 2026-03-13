@@ -1,0 +1,28 @@
+{
+  "appId": "com.matoshree.electroserve",
+  "appName": "ElectroServe",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "allowNavigation": [
+      "*.railway.app",
+      "*.onrender.com",
+      "wa.me",
+      "*.whatsapp.com",
+      "maps.google.com",
+      "www.google.com",
+      "*.google.com"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false,
+    "appendUserAgent": "ElectroServe-App"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}

@@ -1,4 +1,5 @@
 // src/components/owner/OwnerMobile.jsx
+import { openExternal, downloadBlob } from "../utils/openExternal";
 // Mobile-first owner interface — for owners who are out in the field on their phone
 import { useState, useEffect } from "react";
 import { authHeader, apiFetch, getAllCustomers } from "../../services/api";
@@ -225,7 +226,7 @@ function JobsTab({ jobs, technicians, onRefresh, toast, compName }) {
       const data = await res.json();
       onRefresh();
       toast("✅ Assigned!", "success");
-      if (data.whatsappUrl) window.open(data.whatsappUrl, "_blank");
+      if (data.whatsappUrl) openExternal(data.whatsappUrl);
     } catch(e) { toast("Error", "error"); }
   };
 
@@ -383,7 +384,7 @@ function NewJobTab({ customers, technicians, jobs, onDone, toast }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message||"Error");
       toast("✅ Job ban gaya!","success");
-      if (data.whatsappUrl) window.open(data.whatsappUrl,"_blank");
+      if (data.whatsappUrl) openExternal(data.whatsappUrl);
       onDone();
     } catch(e) { toast(e.message,"error"); }
     finally { setLoading(false); }
