@@ -16,6 +16,7 @@ import AllInvoices    from "./components/owner/AllInvoices";
 import LiveTracking   from "./components/owner/LiveTracking";
 import TechApp        from "./components/technician/TechApp";
 import Settings       from "./components/owner/Settings";
+import OwnerMobile    from "./components/owner/OwnerMobile";
 import { getAllCustomers, getExpiringWarranty } from "./services/api";
 import "./App.css";
 
@@ -124,9 +125,12 @@ export default function App() {
   );
 
   // ══════════════════════════════════════════════════════
-  // MOBILE LAYOUT
+  // MOBILE LAYOUT — Owner gets dedicated mobile app
   // ══════════════════════════════════════════════════════
   if (isMobile) {
+    return <OwnerMobile user={user} onLogout={handleLogout} />;
+  }
+  if (false) {
     return (
       <div style={{ background:"var(--bg-primary)", fontFamily:"var(--font-body)" }} className="mobile-root">
 
@@ -190,7 +194,7 @@ export default function App() {
                 }}>
                 <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} />
                 <span style={{ fontSize:10, fontWeight: isActive ? 700 : 500 }}>{label}</span>
-                {badge && <span style={{ position:"absolute", top:4, right:"25%", width:8, height:8, background:"#ef4444", borderRadius:"50%", border:"2px solid #fff" }} />}
+                {badge && <span style={{ position:"absolute", top:6, right:"calc(50% - 16px)", width:8, height:8, background:"#ef4444", borderRadius:"50%", border:"2px solid #fff" }} />}
               </button>
             );
           })}

@@ -583,58 +583,48 @@ export default function TechApp({ user, onLogout }) {
   const emergency   = todayJobs.filter(j=>j.priority==="EMERGENCY");
   const normal      = todayJobs.filter(j=>j.priority!=="EMERGENCY");
 
+  // ── Global new-job notification overlay — shown on ALL screens ─────────────
+  const JobAlertOverlay = newJobAlert ? (
+    <div onClick={() => setNewJobAlert(null)}
+      style={{
+        position:"fixed", top:0, left:0, right:0, zIndex:9999,
+        background: newJobAlert.priority==="EMERGENCY"
+          ? "linear-gradient(135deg,#dc2626,#b91c1c)"
+          : "linear-gradient(135deg,#16a34a,#15803d)",
+        color:"#fff", padding:"14px 16px",
+        boxShadow:"0 4px 24px rgba(0,0,0,0.35)",
+        animation:"slideDown 0.4s cubic-bezier(.22,.68,0,1.2)",
+        cursor:"pointer",
+      }}>
+      <style>{`
+        @keyframes slideDown { from{transform:translateY(-100%);opacity:0} to{transform:translateY(0);opacity:1} }
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+      `}</style>
+      <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{fontSize:32,animation:"pulse 0.8s infinite",filter:"drop-shadow(0 0 8px rgba(255,255,255,0.6))"}}>
+          {newJobAlert.priority==="EMERGENCY" ? "🚨" : "🔔"}
+        </div>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:900,fontSize:16,letterSpacing:0.3}}>
+            {newJobAlert.priority==="EMERGENCY" ? "🚨 EMERGENCY JOB!" : "⚡ Naya Job Assign Hua!"}
+          </div>
+          <div style={{fontSize:13,opacity:0.92,marginTop:2}}>
+            👤 {newJobAlert.customerName}{newJobAlert.machineType ? `  •  🔧 ${newJobAlert.machineType}` : ""}
+          </div>
+          {newJobAlert.address && <div style={{fontSize:12,opacity:0.8,marginTop:2}}>📍 {newJobAlert.address}</div>}
+        </div>
+        <div style={{fontSize:20,opacity:0.7}}>✕</div>
+      </div>
+    </div>
+  ) : null;
+
   // ════════════════════════════════════════════════════════════
   // HOME
   // ════════════════════════════════════════════════════════════
   if (screen==="home") return (
     <div className="tech-mobile">
 
-      {/* ── NEW JOB NOTIFICATION BANNER — Blinkit/Swiggy style ── */}
-      {newJobAlert && (
-        <div onClick={() => { setNewJobAlert(null); }}
-          style={{
-            position:"fixed", top:0, left:0, right:0, zIndex:9999,
-            background: newJobAlert.priority==="EMERGENCY"
-              ? "linear-gradient(135deg,#dc2626,#b91c1c)"
-              : "linear-gradient(135deg,#16a34a,#15803d)",
-            color:"#fff", padding:"14px 16px",
-            boxShadow:"0 4px 24px rgba(0,0,0,0.35)",
-            animation:"slideDown 0.4s cubic-bezier(.22,.68,0,1.2)",
-            cursor:"pointer",
-          }}>
-          <style>{`
-            @keyframes slideDown {
-              from { transform: translateY(-100%); opacity:0; }
-              to   { transform: translateY(0);     opacity:1; }
-            }
-            @keyframes pulse {
-              0%,100% { transform: scale(1); }
-              50%      { transform: scale(1.08); }
-            }
-          `}</style>
-          <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <div style={{
-              fontSize:32, animation:"pulse 0.8s infinite",
-              filter:"drop-shadow(0 0 8px rgba(255,255,255,0.6))"
-            }}>
-              {newJobAlert.priority==="EMERGENCY" ? "🚨" : "🔔"}
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:900,fontSize:16,letterSpacing:0.3}}>
-                {newJobAlert.priority==="EMERGENCY" ? "🚨 EMERGENCY JOB!" : "⚡ Naya Job Assign Hua!"}
-              </div>
-              <div style={{fontSize:13,opacity:0.92,marginTop:2}}>
-                👤 {newJobAlert.customerName}
-                {newJobAlert.machineType ? `  •  🔧 ${newJobAlert.machineType}` : ""}
-              </div>
-              {newJobAlert.address ? (
-                <div style={{fontSize:12,opacity:0.8,marginTop:2}}>📍 {newJobAlert.address}</div>
-              ) : null}
-            </div>
-            <div style={{fontSize:20,opacity:0.7}}>✕</div>
-          </div>
-        </div>
-      )}
+      {/* Job alert handled by global JobAlertOverlay above */}
       <div className="tech-mob-header">
         <div>
           <div className="tech-mob-greeting">Jai Hind 👋</div>
@@ -656,8 +646,11 @@ export default function TechApp({ user, onLogout }) {
             {isActive ? "🟢 Active — Kaam Pe Hoon" : "🔴 Inactive — Kaam Pe Nahi"}
           </div>
           {isActive && activeStart && (
-            <div style={{ fontSize:11, color:"#6b7280", marginTop:3 }}>
-              ⏱️ Online time: {fmtActiveMins(activeMins)} · GPS on
+            <div style={{ fontSize:11, marginTop:3, color: gpsStatus==="error" ? "#ef4444" : "#6b7280", fontWeight: gpsStatus==="error" ? 700 : 400 }}>
+              {gpsStatus==="error"
+                ? "⚠️ GPS nahi mil raha — settings mein location ON karo"
+                : `⏱️ Online: ${fmtActiveMins(activeMins)} · GPS ${gpsStatus==="ok" ? "✅" : "⏳"}`
+              }
             </div>
           )}
           {!isActive && (
@@ -708,6 +701,7 @@ export default function TechApp({ user, onLogout }) {
     const name = cust?.name   || selected.customerName || "Unknown";
     const addr = cust?.address || selected.customerAddress;
     const done = selected.status==="DONE";
+    const mapsUrl = addr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}` : null;
 
     // Step labels for progress bar
     const stepList = ["service","invoice","done"];
@@ -715,9 +709,10 @@ export default function TechApp({ user, onLogout }) {
 
     return (
       <div className="tech-mobile">
+        {JobAlertOverlay}
         {/* Header */}
         <div className="tech-mob-header">
-          <button className="tech-mob-back" onClick={step ? ()=>setStep(step==="invoice"?"service":step==="done"?null:null) : goHome}>
+          <button className="tech-mob-back" onClick={step ? ()=>{ if(step==="invoice") setStep("service"); else if(step==="done") { setStep("invoice"); } else { setStep(null); } } : goHome}>
             {step ? "← Wapas" : "← Back"}
           </button>
           <div className="tech-mob-header-title">
@@ -792,7 +787,7 @@ export default function TechApp({ user, onLogout }) {
               )}
 
               {!done && mob && (
-                <a href={`https://wa.me/91${mob}?text=${encodeURIComponent(`Namaste! Main ${user?.name} hoon, Matoshree Enterprises se. Aapka ${selected.machineType||"machine"} dekhne aa raha hoon.`)}`}
+                <a href={`https://wa.me/91${mob}?text=${encodeURIComponent(`Namaste! Main ${user?.name} hoon, ${companySettings?.companyName||"ElectroServe"} se. Aapka ${selected.machineType||"machine"} dekhne aa raha hoon.`)}`}
                   target="_blank" rel="noreferrer" className="tech-detail-wa-btn">
                   💬 Customer ko WhatsApp Karo
                 </a>
@@ -1169,6 +1164,7 @@ export default function TechApp({ user, onLogout }) {
   // ════════════════════════════════════════════════════════════
   if (screen==="history") return (
     <div className="tech-mobile">
+      {JobAlertOverlay}
       <div className="tech-mob-header">
         <button className="tech-mob-back" onClick={goHome}>← Back</button>
         <div className="tech-mob-header-title">Job History</div>
@@ -1188,6 +1184,44 @@ export default function TechApp({ user, onLogout }) {
               <div className="tech-history-problem">{job.problemDescription}</div>
               {(job.machineType||job.machineBrand)&&<div className="tech-history-machine">🖥️ {job.machineType} {job.machineBrand}</div>}
               <div className="tech-history-date">📅 {job.completedAt?new Date(job.completedAt).toLocaleDateString("en-IN"):job.scheduledDate||"—"}</div>
+              {job.status==="DONE" && (
+                <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
+                  {job.invoiceId && (
+                    <button onClick={()=>downloadInvoicePdf(job.invoiceId, job.customer?.name||job.customerName)}
+                      style={{padding:"6px 12px",background:"rgba(99,102,241,0.1)",color:"#6366f1",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      📄 Invoice
+                    </button>
+                  )}
+                  {job.customer?.warrantyPeriod && job.customer.warrantyPeriod!=="No Warranty" && (
+                    <button onClick={async()=>{
+                      const mob = (job.customer?.mobile||"").toString().replace(/\D/g,"").replace(/^91/,"").slice(-10);
+                      const custObj = {
+                        name: job.customer?.name||job.customerName||"Customer",
+                        mobile: mob,
+                        address: job.customer?.address||"",
+                        machineType: job.machineType||"",
+                        machineBrand: job.machineBrand||"",
+                        serialNumber: job.customer?.serialNumber||"",
+                        serviceDate: job.customer?.serviceDate||"",
+                        warrantyPeriod: job.customer?.warrantyPeriod||"No Warranty",
+                        warrantyEnd: job.customer?.warrantyEnd||"",
+                        serviceDetails: job.problemDescription||"",
+                        technicianName: user?.name||"",
+                        companyName: companySettings?.companyName||"ElectroServe",
+                        companyPhone: companySettings?.companyPhone||"",
+                        companyPhone2: companySettings?.companyPhone2||"",
+                        companyEmail: companySettings?.companyEmail||"",
+                        companyAddress: companySettings?.companyAddress||"",
+                        signatureBase64: companySettings?.signatureBase64||null,
+                      };
+                      generateWarrantyCard(custObj);
+                    }}
+                      style={{padding:"6px 12px",background:"rgba(139,92,246,0.1)",color:"#8b5cf6",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      🛡️ Warranty Card
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))
         }

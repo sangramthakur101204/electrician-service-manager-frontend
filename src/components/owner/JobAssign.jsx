@@ -49,6 +49,7 @@ export default function JobAssign() {
   const [showForm,     setShowForm]     = useState(false);
   const [loading,      setLoading]      = useState(false);
   const [listLoading,  setListLoading]  = useState(true);
+  const [companySettings, setCompanySettings] = useState(null);
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [jobSearch,    setJobSearch]    = useState("");
   const [dateFilter,   setDateFilter]   = useState("");
@@ -82,16 +83,18 @@ export default function JobAssign() {
   const fetchAll = async () => {
     setListLoading(true);
     try {
-      const [j, t, c, ll] = await Promise.all([
+      const [j, t, c, ll, cs] = await Promise.all([
         apiFetch(`${API}/jobs`, { headers: authHeader() }).then(r => r.json()),
         getTechnicians(),
         getAllCustomers(),
         getLiveLocations().catch(()=>[]),
+        apiFetch(`${API}/settings`, { headers: authHeader() }).then(r => r.ok ? r.json() : null).catch(()=>null),
       ]);
       setJobs(Array.isArray(j) ? j : []);
       setTechnicians(t);
       setCustomers(c);
       setLiveLocs(Array.isArray(ll) ? ll : []);
+      if (cs) setCompanySettings(cs);
     } catch (e) { console.error(e); }
     finally { setListLoading(false); }
   };
@@ -895,7 +898,7 @@ function JobCard({ job, onDelete, onCancel, technicians = [], jobs = [], onAssig
         {/* Bottom row: WA + Cancel + Delete */}
         <div style={{ display:"flex", gap:8, alignItems:"center", marginTop: isOwnerActionable ? 8 : 0 }}>
           {mobile && (
-            <a href={`https://wa.me/91${mobile}?text=${encodeURIComponent("Aapki service ki update dena chahta tha — Matoshree Enterprises")}`}
+            <a href={`https://wa.me/91${mobile}?text=${encodeURIComponent(`Aapki service ki update — ${companySettings?.companyName || "Matoshree Enterprises"}`)}`}
               target="_blank" rel="noreferrer"
               style={{ padding:"6px 12px", background:"rgba(37,211,102,0.1)", color:"#25d366", borderRadius:8, fontSize:12, fontWeight:600, textDecoration:"none" }}>
               💬 WA

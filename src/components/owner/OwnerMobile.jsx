@@ -51,8 +51,15 @@ export default function OwnerMobile({ user, onLogout }) {
   const [technicians,setTechnicians]= useState([]);
   const [loading,    setLoading]    = useState(true);
   const [locations,  setLocations]  = useState([]);
+  const [compName,   setCompName]   = useState("Matoshree Enterprises");
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => {
+    fetchAll();
+    apiFetch(`${API}/settings`, { headers: authHeader() })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.companyName) setCompName(d.companyName); })
+      .catch(() => {});
+  }, []);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -63,10 +70,11 @@ export default function OwnerMobile({ user, onLogout }) {
         apiFetch(`${API}/users/technicians`, { headers: authHeader() }),
         apiFetch(`${API}/location`,          { headers: authHeader() }),
       ]);
-      setJobs(     Array.isArray(await jobRes.json())  ? await jobRes.clone().json()  : []);
-      setCustomers(Array.isArray(await cusRes.json())  ? await cusRes.clone().json()  : []);
-      setTechnicians(Array.isArray(await techRes.json())? await techRes.clone().json(): []);
-      setLocations(Array.isArray(await locRes.json())  ? await locRes.clone().json()  : []);
+      const [jd, cd, td, ld] = await Promise.all([jobRes.json(), cusRes.json(), techRes.json(), locRes.json()]);
+      setJobs(       Array.isArray(jd) ? jd : []);
+      setCustomers(  Array.isArray(cd) ? cd : []);
+      setTechnicians(Array.isArray(td) ? td : []);
+      setLocations(  Array.isArray(ld) ? ld : []);
     } catch(e) {}
     finally { setLoading(false); }
   };
@@ -96,7 +104,7 @@ export default function OwnerMobile({ user, onLogout }) {
       {/* ── TOP BAR ── */}
       <div style={{ background:"linear-gradient(135deg,#1e40af,#3b82f6)", padding:"16px 20px 14px", color:"#fff", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, zIndex:50 }}>
         <div>
-          <div style={{ fontSize:11, opacity:0.8, fontWeight:500 }}>⚡ ElectroServe</div>
+          <div style={{ fontSize:11, opacity:0.8, fontWeight:500 }}>⚡ {compName}</div>
           <div style={{ fontSize:17, fontWeight:800, marginTop:2 }}>Namaste, {user?.name?.split(" ")[0]} 👋</div>
         </div>
         <div style={{ display:"flex", gap:10, alignItems:"center" }}>
@@ -112,7 +120,7 @@ export default function OwnerMobile({ user, onLogout }) {
         ) : (
           <>
             {tab === "home"      && <HomeTab jobs={jobs} customers={customers} technicians={technicians} locations={locations} todayStr={todayStr} onNavigate={setTab} />}
-            {tab === "jobs"      && <JobsTab jobs={jobs} technicians={technicians} onRefresh={refetch} toast={toast} />}
+            {tab === "jobs"      && <JobsTab jobs={jobs} technicians={technicians} onRefresh={refetch} toast={toast} compName={compName} />}
             {tab === "newjob"    && <NewJobTab customers={customers} technicians={technicians} jobs={jobs} onDone={() => { refetch(); setTab("jobs"); }} toast={toast} />}
             {tab === "customers" && <CustomersTab customers={customers} onRefresh={refetch} toast={toast} />}
             {tab === "track"     && <TrackTab locations={locations} technicians={technicians} jobs={jobs} />}
@@ -193,7 +201,7 @@ function MiniJobCard({ job }) {
 }
 
 // ── JOBS TAB ─────────────────────────────────────────────────────────────────
-function JobsTab({ jobs, technicians, onRefresh, toast }) {
+function JobsTab({ jobs, technicians, onRefresh, toast, compName }) {
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
 
@@ -252,13 +260,13 @@ function JobsTab({ jobs, technicians, onRefresh, toast }) {
       {filtered.length === 0 ? (
         <div style={{ textAlign:"center", padding:40, color:"#94a3b8" }}>Koi job nahi</div>
       ) : filtered.map(job => (
-        <JobCardMobile key={job.id} job={job} technicians={technicians} onAssign={assignTech} onCancel={cancelJob} />
+        <JobCardMobile key={job.id} job={job} technicians={technicians} jobs={jobs} onAssign={assignTech} onCancel={cancelJob} compName={compName} />
       ))}
     </div>
   );
 }
 
-function JobCardMobile({ job, technicians, onAssign, onCancel }) {
+function JobCardMobile({ job, technicians, jobs, onAssign, onCancel, compName="Matoshree Enterprises" }) {
   const [showAssign, setShowAssign] = useState(false);
   const st = STATUS_COLOR[job.status] || STATUS_COLOR.NEW;
   const name = job.customer?.name || job.customerName || "Unknown";
@@ -266,7 +274,7 @@ function JobCardMobile({ job, technicians, onAssign, onCancel }) {
 
   const freeTechs = technicians.filter(t => {
     if (!t.isActive) return false;
-    return true; // simplified — show all active techs on mobile
+    return !jobs.some(j => j.technician?.id === t.id && !["DONE","CANCELLED"].includes(j.status));
   });
 
   return (
@@ -292,7 +300,7 @@ function JobCardMobile({ job, technicians, onAssign, onCancel }) {
           </a>
         )}
         {mob && (
-          <a href={`https://wa.me/91${mob}`} target="_blank" rel="noreferrer"
+          <a href={`https://wa.me/91${mob}?text=${encodeURIComponent("Namaste! "+compName+" se service update — job status: "+STATUS_COLOR[job.status]?.label)}`} target="_blank" rel="noreferrer"
             style={{ padding:"7px 14px", background:"rgba(37,211,102,0.1)", color:"#16a34a", borderRadius:8, fontSize:13, fontWeight:700, textDecoration:"none" }}>
             💬 WA
           </a>
