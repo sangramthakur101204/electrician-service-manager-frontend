@@ -77,6 +77,7 @@ export default function TechApp({ user, onLogout }) {
   const [invoice,   setInvoice]   = useState(null);
 
   const [companySettings, setCompanySettings] = useState(null);
+  const [newJobAlert, setNewJobAlert] = useState(null); // {jobId, customerName, machineType, priority}
 
   const [gpsStatus, setGpsStatus] = useState("starting"); // "starting" | "ok" | "error"
   const [isActive,  setIsActive]  = useState(() => {
@@ -297,6 +298,60 @@ export default function TechApp({ user, onLogout }) {
       .then(d => { if (d) setCompanySettings(d); })
       .catch(() => {});
   }, []);
+
+  // ── SSE — Real-time new job notifications ─────────────────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem("token") || "";
+    let es;
+    function connect() {
+      es = new EventSource(`${API}/sse/my-jobs?token=${encodeURIComponent(token)}`);
+      es.addEventListener("new-job", (e) => {
+        try {
+          const job = JSON.parse(e.data);
+          // Play notification sound
+          playJobSound(job.priority === "EMERGENCY");
+          // Vibrate on mobile
+          if (navigator.vibrate) navigator.vibrate(job.priority === "EMERGENCY" ? [300,100,300,100,300] : [200,100,200]);
+          // Show alert banner
+          setNewJobAlert(job);
+          // Reload jobs list
+          loadJobs();
+          // Auto-hide after 8 seconds
+          setTimeout(() => setNewJobAlert(null), 8000);
+        } catch {}
+      });
+      es.onerror = () => { es.close(); setTimeout(connect, 5000); };
+    }
+    connect();
+    return () => es && es.close();
+  }, []);
+
+  function playJobSound(isEmergency) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const playBeep = (freq, start, dur) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = freq;
+        o.type = "sine";
+        g.gain.setValueAtTime(0, ctx.currentTime + start);
+        g.gain.linearRampToValueAtTime(0.6, ctx.currentTime + start + 0.02);
+        g.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
+        o.start(ctx.currentTime + start);
+        o.stop(ctx.currentTime + start + dur + 0.05);
+      };
+      if (isEmergency) {
+        // Urgent — fast repeating high beeps
+        [0, 0.25, 0.5, 0.75, 1.0].forEach(t => playBeep(880, t, 0.2));
+      } else {
+        // Normal — pleasant 3-tone chime (like Blinkit/Zomato)
+        playBeep(523, 0,    0.18); // C5
+        playBeep(659, 0.22, 0.18); // E5
+        playBeep(784, 0.44, 0.3);  // G5
+      }
+    } catch {}
+  }
 
   async function loadJobs() {
     setLoading(true);
@@ -533,6 +588,53 @@ export default function TechApp({ user, onLogout }) {
   // ════════════════════════════════════════════════════════════
   if (screen==="home") return (
     <div className="tech-mobile">
+
+      {/* ── NEW JOB NOTIFICATION BANNER — Blinkit/Swiggy style ── */}
+      {newJobAlert && (
+        <div onClick={() => { setNewJobAlert(null); }}
+          style={{
+            position:"fixed", top:0, left:0, right:0, zIndex:9999,
+            background: newJobAlert.priority==="EMERGENCY"
+              ? "linear-gradient(135deg,#dc2626,#b91c1c)"
+              : "linear-gradient(135deg,#16a34a,#15803d)",
+            color:"#fff", padding:"14px 16px",
+            boxShadow:"0 4px 24px rgba(0,0,0,0.35)",
+            animation:"slideDown 0.4s cubic-bezier(.22,.68,0,1.2)",
+            cursor:"pointer",
+          }}>
+          <style>{`
+            @keyframes slideDown {
+              from { transform: translateY(-100%); opacity:0; }
+              to   { transform: translateY(0);     opacity:1; }
+            }
+            @keyframes pulse {
+              0%,100% { transform: scale(1); }
+              50%      { transform: scale(1.08); }
+            }
+          `}</style>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{
+              fontSize:32, animation:"pulse 0.8s infinite",
+              filter:"drop-shadow(0 0 8px rgba(255,255,255,0.6))"
+            }}>
+              {newJobAlert.priority==="EMERGENCY" ? "🚨" : "🔔"}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:900,fontSize:16,letterSpacing:0.3}}>
+                {newJobAlert.priority==="EMERGENCY" ? "🚨 EMERGENCY JOB!" : "⚡ Naya Job Assign Hua!"}
+              </div>
+              <div style={{fontSize:13,opacity:0.92,marginTop:2}}>
+                👤 {newJobAlert.customerName}
+                {newJobAlert.machineType ? `  •  🔧 ${newJobAlert.machineType}` : ""}
+              </div>
+              {newJobAlert.address ? (
+                <div style={{fontSize:12,opacity:0.8,marginTop:2}}>📍 {newJobAlert.address}</div>
+              ) : null}
+            </div>
+            <div style={{fontSize:20,opacity:0.7}}>✕</div>
+          </div>
+        </div>
+      )}
       <div className="tech-mob-header">
         <div>
           <div className="tech-mob-greeting">Jai Hind 👋</div>
@@ -1156,7 +1258,9 @@ function JobCard({job,onClick}) {
     <div className={`tech-job-card ${job.priority==="EMERGENCY"?"emergency":""}`} onClick={onClick}>
       <div className="tech-job-card-top">
         <div className="tech-job-customer">{job.customer?.name||job.customerName||"Unknown"}</div>
-        <div className="tech-job-status" style={{background:sf.bg,color:sf.color}}>{job.status?.replace(/_/g," ")}</div>
+        <div className="tech-job-status" style={{background:sf.bg,color:sf.color}}>
+          {{ASSIGNED:"📋 Assigned", ON_THE_WAY:"🛵 Raste Mein", IN_PROGRESS:"🔧 Kaam Chal Raha", DONE:"✅ Complete", NEW:"🆕 Naya", CANCELLED:"❌ Cancel"}[job.status] || job.status?.replace(/_/g," ")}
+        </div>
       </div>
       <div className="tech-job-problem">{job.problemDescription}</div>
       {(job.machineType||job.machineBrand)&&<div className="tech-job-machine">🖥️ {job.machineType} {job.machineBrand}</div>}

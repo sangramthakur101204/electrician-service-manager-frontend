@@ -548,8 +548,20 @@ export default function JobAssign() {
               <Section title="👷 Technician Assign Karo">
                 {(() => {
                   const activeTechs = technicians.filter(t => t.isActive);
+                  const offlineTechs = technicians.filter(t => !t.isActive);
                   if (activeTechs.length === 0) {
-                    return <div style={{ padding:"14px", background:"#fef2f2", borderRadius:10, color:"#ef4444", fontSize:13 }}>Koi active technician nahi hai — pehle technician add karo</div>;
+                    return (
+                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                        <div style={{ padding:"14px", background:"#fef2f2", borderRadius:10, color:"#ef4444", fontSize:13, fontWeight:600 }}>
+                          🔴 Koi bhi technician Online nahi hai abhi
+                        </div>
+                        {offlineTechs.length > 0 && (
+                          <div style={{fontSize:12,color:"#94a3b8",padding:"8px 12px",background:"#f8fafc",borderRadius:8,border:"1px solid #e2e8f0"}}>
+                            Offline technicians: {offlineTechs.map(t=>t.name).join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    );
                   }
 
                   // Free = no active (non-DONE/CANCELLED) job
@@ -585,6 +597,11 @@ export default function JobAssign() {
                         {busyTechs.length > 0 && (
                           <div style={{padding:"5px 10px",background:"rgba(245,158,11,0.08)",border:"1px solid rgba(245,158,11,0.2)",borderRadius:8,fontSize:11,color:"#92400e",fontWeight:700}}>
                             ⏳ {busyTechs.length} Busy
+                          </div>
+                        )}
+                        {offlineTechs.length > 0 && (
+                          <div style={{padding:"5px 10px",background:"rgba(100,116,139,0.08)",border:"1px solid rgba(100,116,139,0.2)",borderRadius:8,fontSize:11,color:"#64748b",fontWeight:700}}>
+                            🔴 {offlineTechs.length} Offline
                           </div>
                         )}
                         {form.latitude && sortedFree.some(t=>t.hasLoc) && (
@@ -635,10 +652,10 @@ export default function JobAssign() {
                               <div style={{fontWeight:700,fontSize:14,color:"#1e293b"}}>{t.name}</div>
                               {busy && activeJob ? (
                                 <div style={{fontSize:11,color:"#92400e",marginTop:1,fontWeight:600}}>
-                                  🔧 {activeJob.customer?.name || activeJob.customerName || "Job"} · {activeJob.status?.replace(/_/g," ")}
+                                  🔧 {activeJob.customer?.name || activeJob.customerName || "Job"} · {{"ASSIGNED":"Assigned","ON_THE_WAY":"Raste Mein","IN_PROGRESS":"Kaam Chal Raha","DONE":"Complete"}[activeJob.status] || activeJob.status}
                                 </div>
                               ) : (
-                                <div style={{fontSize:11,color:"#10b981",marginTop:1,fontWeight:600}}>✅ Free hai · 📞 {t.mobile}</div>
+                                <div style={{fontSize:11,color:"#10b981",marginTop:1,fontWeight:600}}>🟢 Online · Free hai · 📞 {t.mobile}</div>
                               )}
                               {busy && (
                                 <div style={{fontSize:10,color:"#b45309",marginTop:2}}>
@@ -867,7 +884,7 @@ function JobCard({ job, onDelete, onCancel, technicians = [], jobs = [], onAssig
                 </div>
                 <div>
                   <div style={{ fontWeight:700, fontSize:13 }}>{t.name}</div>
-                  <div style={{ fontSize:11, color:"#64748b" }}>📞 {t.mobile} · Free hai</div>
+                  <div style={{ fontSize:11, color:"#10b981", fontWeight:600 }}>🟢 Online · Free · 📞 {t.mobile}</div>
                 </div>
                 <div style={{ marginLeft:"auto", fontSize:12, fontWeight:700, color:"#3b82f6" }}>Assign →</div>
               </div>
