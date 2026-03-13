@@ -311,7 +311,7 @@ export default function JobAssign() {
         </div>
       ) : (
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          {filteredJobs.map(job => <JobCard key={job.id} job={job} jobs={jobs} technicians={technicians} onAssign={assignTechnician} onDelete={deleteJob} onCancel={cancelJob} />)}
+          {filteredJobs.map(job => <JobCard key={job.id} job={job} jobs={jobs} technicians={technicians} onAssign={assignTechnician} onDelete={deleteJob} onCancel={cancelJob} companySettings={companySettings} />)}
         </div>
       )}
 
@@ -793,7 +793,7 @@ export default function JobAssign() {
 }
 
 // ── Job Card ──────────────────────────────────────────────────────────────────
-function JobCard({ job, onDelete, onCancel, technicians = [], jobs = [], onAssign, onAssignTech }) {
+function JobCard({ job, onDelete, onCancel, technicians = [], jobs = [], onAssign, onAssignTech, companySettings }) {
   // Support both prop names
   const doAssign = onAssign || onAssignTech;
   const st = STATUS_LABEL[job.status] || STATUS_LABEL.NEW;
