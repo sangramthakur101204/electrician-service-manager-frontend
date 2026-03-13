@@ -222,15 +222,45 @@ export default function Settings({ onLogout }) {
             💡 Ye templates WhatsApp messages mein use honge. Variables: <strong>{"{customerName}"}</strong>, <strong>{"{techName}"}</strong>, <strong>{"{techMobile}"}</strong>, <strong>{"{machineType}"}</strong>, <strong>{"{scheduledDate}"}</strong>, <strong>{"{invoiceNo}"}</strong>, <strong>{"{total}"}</strong>, <strong>{"{warranty}"}</strong>, <strong>{"{companyName}"}</strong>
           </div>
 
+          {/* Live Footer Preview — shows what gets auto-appended to ALL messages */}
+          {(() => {
+            const parts = [];
+            if (s.companyPhone)   parts.push(`📞 ${s.companyPhone}`);
+            if (s.companyPhone2)  parts.push(`📞 ${s.companyPhone2}`);
+            if (s.companyEmail)   parts.push(`✉️ ${s.companyEmail}`);
+            if (s.companyAddress) {
+              parts.push(`📍 ${s.companyAddress}`);
+              parts.push(`🗺️ maps.google.com/?q=${encodeURIComponent(s.companyAddress)}`);
+            }
+            try { JSON.parse(s.linksJson||"[]").filter(l=>l.url).forEach(l=>parts.push(`🔗 ${l.label?l.label+": ":""}${l.url}`)); } catch(e){}
+            return (
+              <div style={{ padding:"12px 16px", background:"rgba(16,185,129,0.06)", borderRadius:12, border:"1.5px solid rgba(16,185,129,0.2)" }}>
+                <div style={{ fontSize:11, fontWeight:800, color:"#059669", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:8 }}>
+                  📎 Auto-Footer — Har message ke end mein yeh automatically add hoga
+                </div>
+                {parts.length === 0 ? (
+                  <div style={{ fontSize:12, color:"#94a3b8", fontStyle:"italic" }}>
+                    ⚠️ Footer empty hai — Settings › Company mein phone/address/email bharo, ya Links tab mein links add karo.
+                  </div>
+                ) : (
+                  <pre style={{ margin:0, fontSize:12, color:"#1e293b", fontFamily:"monospace", whiteSpace:"pre-wrap", lineHeight:1.8 }}>
+{`— ${s.companyName||"Company Name"}
+${parts.join("\n")}`}
+                  </pre>
+                )}
+              </div>
+            );
+          })()}
+
           {[
-            { key:"assignedMsgTemplate", label:"📅 Job Assigned → Customer ko msg", icon:"📅",
-              placeholder:`🙏 Namaste {customerName} ji!\n\nAapka service request confirm ho gaya hai. ✅\n\n👷 Technician: {techName}\n📞 Tech Mobile: {techMobile}\n📅 Schedule: {scheduledDate}\n🔧 Machine: {machineType}\n\nKoi problem ho toh humse contact karein.\n\n- {companyName}` },
-            { key:"invoiceMsgTemplate", label:"🧾 Invoice → Customer ko msg", icon:"🧾",
-              placeholder:`🙏 Namaste {customerName} ji!\n\nAapki {machineType} ki service complete ho gayi. ✅\n\n🧾 Invoice No: {invoiceNo}\n💰 Total: {total}\n🛡️ Warranty: {warranty}\n\nDhanyawad aapka! 🙏\n\n- {companyName}` },
-            { key:"warrantyMsgTemplate", label:"🛡️ Warranty Card → Customer ko msg", icon:"🛡️",
-              placeholder:`🛡️ WARRANTY CARD\n\nCustomer: {customerName}\nMachine: {machineType}\nWarranty: {warranty}\n\nWarranty ke liye humara number save karein.\n\n- {companyName}` },
-            { key:"thankyouMsgTemplate", label:"🙏 Thank You → Customer ko msg", icon:"🙏",
-              placeholder:`🙏 Namaste {customerName} ji!\n\nAapka bahut bahut dhanyawad! 😊\nHamari service aapko pasand aayi hogi.\n\nKoi bhi problem aaye toh zaroor batao.\n\n- {companyName}` },
+            { key:"assignedMsgTemplate", label:"📅 Job Assigned → Customer ko msg",
+              placeholder:`🙏 Namaste {customerName} ji!\n\nAapka service request confirm ho gaya hai. ✅\n\n👷 Technician: {techName}\n📞 Tech Mobile: {techMobile}\n📅 Schedule: {scheduledDate}\n🔧 Machine: {machineType}\n\nKoi problem ho toh humse contact karein.\n\n— {companyName}` },
+            { key:"invoiceMsgTemplate", label:"🧾 Invoice → Customer ko msg",
+              placeholder:`🙏 Namaste {customerName} ji!\n\nAapki {machineType} ki service complete ho gayi. ✅\n\n🧾 Invoice No: {invoiceNo}\n💰 Total: {total}\n🛡️ Warranty: {warranty}\n\nDhanyawad aapka! 🙏\n\n— {companyName}` },
+            { key:"warrantyMsgTemplate", label:"🛡️ Warranty Card → Customer ko msg",
+              placeholder:`🛡️ WARRANTY CARD\n\nCustomer: {customerName}\nMachine: {machineType}\nWarranty: {warranty}\n\nWarranty ke liye humara number save karein.\n\n— {companyName}` },
+            { key:"thankyouMsgTemplate", label:"🙏 Thank You → Customer ko msg",
+              placeholder:`🙏 Namaste {customerName} ji!\n\nAapka bahut bahut dhanyawad! 😊\nHamari service aapko pasand aayi hogi.\n\nKoi bhi problem aaye toh zaroor batao.\n\n— {companyName}` },
           ].map(({ key, label, placeholder }) => (
             <Section key={key} title={label} icon={label.split(" ")[0]}>
               <textarea
@@ -240,8 +270,9 @@ export default function Settings({ onLogout }) {
                 rows={6}
                 style={{ ...inp, resize:"vertical", fontFamily:"monospace", fontSize:12, lineHeight:1.6 }}
               />
-              <div style={{ marginTop:8, fontSize:11, color:"#94a3b8" }}>
-                Khali chhodo toh default message use hoga. Preview ke liye save karo.
+              <div style={{ marginTop:6, fontSize:11, color:"#94a3b8", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span>Khali chhodo toh default message use hoga.</span>
+                {s[key] && <button onClick={()=>set(key,"")} style={{border:"none",background:"none",color:"#ef4444",cursor:"pointer",fontSize:11,fontWeight:600}}>🗑 Reset</button>}
               </div>
             </Section>
           ))}

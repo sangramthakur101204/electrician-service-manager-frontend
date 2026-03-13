@@ -83,6 +83,7 @@ export default function TechApp({ user, onLogout }) {
   const [invoice,   setInvoice]   = useState(null);
 
   const [gpsStatus, setGpsStatus] = useState("starting"); // "starting" | "ok" | "error"
+  const stopGpsRef = useRef(null);  // Direct GPS stop — called immediately on inactive
   const [isActive,  setIsActive]  = useState(() => {
     // Persist active state in localStorage
     return localStorage.getItem(`tech_active_${user?.id}`) === "true";
@@ -124,7 +125,9 @@ export default function TechApp({ user, onLogout }) {
       localStorage.removeItem(`tech_active_start_${user?.id}`);
       setActiveStart(null);
       setActiveMins(0);
-      toast("⏸️ Inactive ho gaye", "info");
+      // Immediately stop GPS via ref (don't wait for useEffect cleanup)
+      if (stopGpsRef.current) stopGpsRef.current();
+      toast("⏸️ Inactive ho gaye — GPS band hua", "info");
       // Backend: end session + clear location + toggle inactive
       try {
         await Promise.all([
@@ -234,6 +237,8 @@ export default function TechApp({ user, onLogout }) {
       if (fallbackId !== null) { clearInterval(fallbackId); fallbackId = null; }
       releaseWakeLock();
     }
+    // Register stop function so toggleActive can call it directly
+    stopGpsRef.current = () => { stopNativeGPS(); stopWebGPS(); };
 
     // Visibility change — re-acquire wake lock on tab focus (web only)
     const onVisibility = () => {
@@ -472,51 +477,40 @@ export default function TechApp({ user, onLogout }) {
         }}>Logout</button>
       </div>
 
-      {/* ── ACTIVE + GPS — Two separate buttons ── */}
-      <div style={{ margin:"10px 12px 0", display:"flex", gap:10 }}>
-        {/* Active / Inactive button */}
-        <button onClick={toggleActive} style={{
-          flex:1, padding:"13px 10px", borderRadius:13, border:"none",
-          fontWeight:800, fontSize:13, cursor:"pointer",
-          background: isActive
-            ? "linear-gradient(135deg,#10b981,#059669)"
-            : "linear-gradient(135deg,#ef4444,#dc2626)",
-          color:"#fff",
-          boxShadow: isActive
-            ? "0 4px 14px rgba(16,185,129,0.35)"
-            : "0 4px 14px rgba(239,68,68,0.3)",
-        }}>
-          <div style={{ fontSize:18, marginBottom:2 }}>{isActive ? "🟢" : "🔴"}</div>
-          <div>{isActive ? "Active" : "Inactive"}</div>
-          {isActive && <div style={{ fontSize:10, fontWeight:600, opacity:0.9, marginTop:2 }}>
-            ⏱️ {fmtActiveMins(activeMins)}
-          </div>}
-          {!isActive && <div style={{ fontSize:10, fontWeight:600, opacity:0.9, marginTop:2 }}>
-            Tap to go Active
-          </div>}
-        </button>
-
-        {/* GPS status — only visible when active */}
-        <div style={{
-          flex:1, padding:"13px 10px", borderRadius:13,
-          background: isActive
-            ? "linear-gradient(135deg,#3b82f6,#2563eb)"
-            : "#f1f5f9",
-          border: isActive ? "none" : "1.5px solid #e2e8f0",
-          display:"flex", flexDirection:"column", alignItems:"center",
-          justifyContent:"center", gap:2,
-        }}>
-          <div style={{ fontSize:18 }}>{isActive ? "📡" : "📡"}</div>
-          <div style={{ fontWeight:800, fontSize:13,
-            color: isActive ? "#fff" : "#94a3b8" }}>
-            GPS {isActive ? "ON" : "OFF"}
-          </div>
-          <div style={{ fontSize:10, fontWeight:600,
-            color: isActive ? "rgba(255,255,255,0.85)" : "#cbd5e1", marginTop:1 }}>
-            {isActive ? "Tracking Live" : "Inactive pe band"}
+      {/* ── ACTIVE / INACTIVE — Full width, GPS auto with it ── */}
+      <button onClick={toggleActive} style={{
+        display:"block", margin:"12px 12px 0", width:"calc(100% - 24px)",
+        padding:"16px 20px", borderRadius:16, border:"none", boxSizing:"border-box",
+        cursor:"pointer", display:"flex", alignItems:"center",
+        justifyContent:"space-between",
+        background: isActive
+          ? "linear-gradient(135deg,#10b981,#059669)"
+          : "linear-gradient(135deg,#ef4444,#dc2626)",
+        color:"#fff",
+        boxShadow: isActive
+          ? "0 6px 20px rgba(16,185,129,0.4)"
+          : "0 6px 20px rgba(239,68,68,0.35)",
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+          <span style={{ fontSize:32 }}>{isActive ? "🟢" : "🔴"}</span>
+          <div style={{ textAlign:"left" }}>
+            <div style={{ fontSize:17, fontWeight:900, letterSpacing:"-0.3px" }}>
+              {isActive ? "Active — Kaam Pe Hoon" : "Inactive — Kaam Pe Nahi"}
+            </div>
+            <div style={{ fontSize:12, fontWeight:500, opacity:0.9, marginTop:2 }}>
+              {isActive
+                ? `⏱️ ${fmtActiveMins(activeMins)} · 📡 GPS Live`
+                : "Tap karke Active ho jao • GPS bhi ON ho jaayega"}
+            </div>
           </div>
         </div>
-      </div>
+        <div style={{
+          background:"rgba(255,255,255,0.2)", borderRadius:10,
+          padding:"6px 14px", fontSize:12, fontWeight:800, flexShrink:0
+        }}>
+          {isActive ? "⏸ Stop" : "▶ Start"}
+        </div>
+      </button>
 
       <div className="tech-mob-stats">
         <Stat num={todayJobs.length}     label="Aaj Ke Jobs" />

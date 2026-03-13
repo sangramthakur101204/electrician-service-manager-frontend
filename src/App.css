@@ -834,9 +834,10 @@ tbody tr:last-child td { border-bottom: none; }
    TECHNICIAN MOBILE APP
    ============================================================ */
 .tech-mobile {
-  min-height:100vh; max-width:480px; margin:0 auto;
+  min-height:100vh; width:100%; max-width:480px; margin:0 auto;
   background:var(--bg-primary); display:flex; flex-direction:column;
   padding-bottom:70px; position:relative;
+  overflow-x:hidden; box-sizing:border-box;
 }
 .tech-mob-header {
   display:flex; justify-content:space-between; align-items:center;
