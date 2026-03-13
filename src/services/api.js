@@ -215,6 +215,13 @@ export const downloadInvoicePdf = async (invoiceId, customerName, invoiceNumber)
   document.body.removeChild(a); URL.revokeObjectURL(url);
 };
 
+// Returns PDF as Blob — for Web Share API (WhatsApp pe share karo)
+export const getInvoicePdfBlob = async (invoiceId) => {
+  const res = await apiFetch(`${API}/invoices/${invoiceId}/pdf`, { headers: authHeader() });
+  if (!res.ok) throw new Error("PDF fetch failed");
+  return res.blob();
+};
+
 // ── Reverse Geocode ───────────────────────────────────────────────────────────
 export const reverseGeocode = async (lat, lng) => {
   const res = await fetch(
