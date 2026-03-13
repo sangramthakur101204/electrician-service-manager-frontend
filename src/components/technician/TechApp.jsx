@@ -925,37 +925,62 @@ export default function TechApp({ user, onLogout }) {
                   </div>
                 </div>
 
-                {/* Action buttons — PDF share via Web Share API */}
+                {/* Action buttons — 3 alag alag */}
                 <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:18}}>
 
-                  {/* 1. Invoice PDF — WhatsApp pe share */}
+                  {/* 1. Thank You — sirf WhatsApp message */}
+                  {mob ? (
+                    <ActionBtn
+                      href={`https://wa.me/91${mob}?text=${encodeURIComponent(
+                        "🙏 *Thank You " + custName + " ji!*\n\n" +
+                        "Aapki *" + (sForm.serviceDetails || "service") + "* complete ho gayi. ✅\n\n" +
+                        "🧾 Invoice No: *" + invoice.invoiceNumber + "*\n" +
+                        "💰 Total: *₹" + Number(invoice.totalAmount||0).toLocaleString("en-IN") + "*\n" +
+                        (sForm.warrantyPeriod !== "No Warranty" ? "🛡️ Warranty: *" + sForm.warrantyPeriod + "*\n" : "") +
+                        "\nKoi bhi problem ho toh zaroor call karein. 😊\n" +
+                        "— *" + co + "*" +
+                        (companySettings?.companyPhone   ? "\n📞 " + companySettings.companyPhone   : "") +
+                        (companySettings?.companyPhone2  ? "\n📞 " + companySettings.companyPhone2  : "") +
+                        (companySettings?.companyEmail   ? "\n✉️ " + companySettings.companyEmail   : "") +
+                        (companySettings?.companyAddress ? "\n📍 " + companySettings.companyAddress : "")
+                      )}`}
+                      bg="linear-gradient(135deg,#25d366,#128c7e)" textColor="#fff"
+                      icon="💬" label="Thank You Message — WhatsApp pe Bhejo"
+                      sub="Service complete hone ka thank you message"/>
+                  ) : (
+                    <div style={{padding:"12px 16px",background:"rgba(245,158,11,0.08)",border:"1.5px solid rgba(245,158,11,0.3)",borderRadius:12,fontSize:13,color:"#92400e",textAlign:"center"}}>
+                      ⚠️ Customer ka mobile number nahi hai
+                    </div>
+                  )}
+
+                  {/* 2. Invoice PDF — WhatsApp pe share */}
                   <ActionBtn
                     onClick={async () => {
                       try {
-                        toast("⏳ PDF ban raha hai...", "info", 2000);
+                        toast("⏳ Invoice PDF ban raha hai...", "info", 2000);
                         const blob = await getInvoicePdfBlob(invoice.id);
                         const file = new File([blob], `Invoice_${invoice.invoiceNumber}.pdf`, { type:"application/pdf" });
-                        const thankyouMsg =
-                          `🧾 *Invoice: ${invoice.invoiceNumber}*\n\n`+
-                          `Hello *${custName}*! 👋\n\n`+
-                          `Aapki service complete ho gayi. Invoice PDF attached hai.\n\n`+
-                          `💰 *Total: ₹${Number(invoice.totalAmount||0).toLocaleString("en-IN")}*\n`+
-                          `✅ Kaam: ${sForm.serviceDetails}\n`+
-                          (sForm.warrantyPeriod !== "No Warranty" ? `🛡️ Warranty: ${sForm.warrantyPeriod}\n` : "")+
-                          `\nDhanyawad! 🙏\n— *${co}*`;
+                        const invMsg =
+                          "🧾 *Invoice: " + invoice.invoiceNumber + "*\n\n" +
+                          "Hello *" + custName + "*! 👋\n" +
+                          "Invoice PDF attached hai.\n\n" +
+                          "💰 *Total: ₹" + Number(invoice.totalAmount||0).toLocaleString("en-IN") + "*\n" +
+                          "— *" + co + "*";
                         if (navigator.share && navigator.canShare({ files:[file] })) {
-                          await navigator.share({ files:[file], text: thankyouMsg, title:`Invoice ${invoice.invoiceNumber}` });
+                          await navigator.share({ files:[file], text: invMsg, title:"Invoice " + invoice.invoiceNumber });
                         } else {
                           downloadInvoicePdf(invoice.id, custName, invoice.invoiceNumber);
-                          if (mob) setTimeout(() => window.open(`https://wa.me/91${mob}?text=${encodeURIComponent(thankyouMsg)}`, "_blank"), 1500);
+                          if (mob) setTimeout(() => window.open("https://wa.me/91" + mob + "?text=" + encodeURIComponent(invMsg), "_blank"), 1500);
                         }
-                      } catch(e) { toast("Share mein error: " + e.message, "error"); }
+                      } catch(e) {
+                        downloadInvoicePdf(invoice.id, custName, invoice.invoiceNumber);
+                      }
                     }}
-                    bg="linear-gradient(135deg,#25d366,#128c7e)" textColor="#fff"
-                    icon="💬" label="Invoice PDF + Thank You — WhatsApp pe Bhejo"
-                    sub="PDF + thank you message customer ko"/>
+                    bg="linear-gradient(135deg,#6366f1,#4f46e5)" textColor="#fff"
+                    icon="📄" label="Invoice PDF — WhatsApp pe Bhejo"
+                    sub="PDF file directly customer ko share karo"/>
 
-                  {/* 2. Warranty Card PNG — WhatsApp pe share */}
+                  {/* 3. Warranty Card — WhatsApp pe share */}
                   {hasWarranty && (
                     <ActionBtn
                       onClick={async () => {
@@ -963,44 +988,33 @@ export default function TechApp({ user, onLogout }) {
                           toast("⏳ Warranty card ban raha hai...", "info", 2000);
                           const warrantyObj = getWarrantyCustomerObj();
                           const blob = await generateWarrantyCardBlob(warrantyObj);
-                          const file = new File([blob], `WarrantyCard_${sForm.warrantyPeriod}.png`, { type:"image/png" });
+                          const file = new File([blob], "WarrantyCard_" + custName + ".png", { type:"image/png" });
                           const warMsg =
-                            `🛡️ *Warranty Card*\n\n`+
-                            `Hello *${custName}*!\n\n`+
-                            `Aapki warranty card attached hai.\n`+
-                            `✅ Warranty: *${sForm.warrantyPeriod}*\n\n`+
-                            `— *${co}*`;
+                            "🛡️ *Warranty Card*\n\n" +
+                            "Hello *" + custName + "*!\n" +
+                            "Aapki warranty card attached hai. 👆\n\n" +
+                            "✅ Warranty: *" + sForm.warrantyPeriod + "*\n" +
+                            "— *" + co + "*";
                           if (navigator.share && navigator.canShare({ files:[file] })) {
                             await navigator.share({ files:[file], text: warMsg, title:"Warranty Card" });
                           } else {
                             generateWarrantyCard(warrantyObj);
-                            if (mob) setTimeout(() => window.open(`https://wa.me/91${mob}?text=${encodeURIComponent(warMsg)}`, "_blank"), 1500);
+                            if (mob) setTimeout(() => window.open("https://wa.me/91" + mob + "?text=" + encodeURIComponent(warMsg), "_blank"), 1500);
                           }
-                        } catch(e) { toast("Share mein error: " + e.message, "error"); }
+                        } catch(e) {
+                          generateWarrantyCard(getWarrantyCustomerObj());
+                        }
                       }}
                       bg="linear-gradient(135deg,#1a2a4a,#2d4a7a)" textColor="#fff"
                       icon="🛡️" label="Warranty Card — WhatsApp pe Bhejo"
-                      sub={`${sForm.warrantyPeriod} — PNG image with company details`}/>
+                      sub={`${sForm.warrantyPeriod} — PNG image customer ko`}/>
                   )}
 
-                  {/* 3. Sirf save — fallback */}
-                  <div style={{display:"flex",gap:8}}>
-                    <button onClick={()=>downloadInvoicePdf(invoice.id, custName, invoice.invoiceNumber)}
-                      style={{flex:1,padding:"10px 8px",background:"rgba(99,102,241,0.08)",border:"1.5px solid rgba(99,102,241,0.25)",borderRadius:10,color:"#6366f1",fontWeight:700,fontSize:12,cursor:"pointer"}}>
-                      📄 Invoice PDF Save
-                    </button>
-                    {hasWarranty && (
-                      <button onClick={()=>generateWarrantyCard(getWarrantyCustomerObj())}
-                        style={{flex:1,padding:"10px 8px",background:"rgba(201,148,26,0.08)",border:"1.5px solid rgba(201,148,26,0.3)",borderRadius:10,color:"#92400e",fontWeight:700,fontSize:12,cursor:"pointer"}}>
-                        🛡️ Warranty PNG Save
-                      </button>
-                    )}
-                  </div>
-
-                  {/* 4. Home */}
+                  {/* Home */}
                   <ActionBtn onClick={goHome}
                     bg="#f8fafc" border="#e2e8f0" textColor="#64748b"
                     icon="🏠" label="Home Pe Wapas Jao"/>
+                </div>
                 </div>
 
                 {/* Invoice items */}
