@@ -490,13 +490,21 @@ export default function TechApp({ user, onLogout }) {
     const cust = doneData?.customer || selected?.customer || {};
     return {
       ...cust,
-      name:          cust.name || selected?.customerName || "",
-      machineType:   cust.machineType  || selected?.machineType  || "",
-      machineBrand:  cust.machineBrand || selected?.machineBrand || "",
-      serialNumber:  sForm.serialNumber || "",
-      serviceDate:   sForm.serviceDate,
-      warrantyPeriod:sForm.warrantyPeriod,
-      serviceDetails:sForm.serviceDetails,
+      name:           cust.name || selected?.customerName || "",
+      machineType:    cust.machineType  || selected?.machineType  || "",
+      machineBrand:   cust.machineBrand || selected?.machineBrand || "",
+      serialNumber:   sForm.serialNumber || "",
+      serviceDate:    sForm.serviceDate,
+      warrantyPeriod: sForm.warrantyPeriod,
+      serviceDetails: sForm.serviceDetails,
+      technicianName: user?.name || "",
+      // Company details for footer
+      companyName:    companySettings?.companyName    || "Matoshree Enterprises",
+      companyPhone:   companySettings?.companyPhone   || "",
+      companyPhone2:  companySettings?.companyPhone2  || "",
+      companyEmail:   companySettings?.companyEmail   || "",
+      companyAddress: companySettings?.companyAddress || "",
+      signatureBase64:companySettings?.signatureBase64 || null,
     };
   }
 
@@ -900,43 +908,26 @@ export default function TechApp({ user, onLogout }) {
                   </div>
                 </div>
 
-                {/* Action buttons — in correct order */}
+                {/* Action buttons — PDF only, no WhatsApp msg format */}
                 <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:18}}>
 
-                  {/* 1. Invoice + Thank you WhatsApp */}
-                  {invWA && (
-                    <ActionBtn href={invWA}
-                      bg="#25d366" icon="💬"
-                      label="Customer ko Invoice + Thank You Bhejo"
-                      sub="Invoice amount + kaam ki details + thank you"/>
-                  )}
-
-                  {/* 2. Warranty Card WhatsApp (only if warranty) */}
-                  {hasWarranty && warWA && (
-                    <ActionBtn href={warWA}
-                      bg="rgba(245,196,24,0.1)" border="#f5c518" textColor="#b45309"
-                      icon="🛡️"
-                      label="Warranty Card WhatsApp pe Bhejo"
-                      sub={`${sForm.warrantyPeriod} warranty card customer ko`}/>
-                  )}
-
-                  {/* 3. Download Warranty Card image (only if warranty) */}
-                  {hasWarranty && (
-                    <ActionBtn onClick={()=>generateWarrantyCard(getWarrantyCustomerObj())}
-                      bg="rgba(30,41,59,0.06)" border="#334155" textColor="#1e293b"
-                      icon="📋"
-                      label="Warranty Card Download Karo"
-                      sub="PNG image — print ya WhatsApp pe bhejo"/>
-                  )}
-
-                  {/* 4. PDF Invoice */}
+                  {/* 1. PDF Invoice download */}
                   <ActionBtn
                     onClick={()=>downloadInvoicePdf(invoice.id, cust?.name||name, invoice.invoiceNumber)}
-                    bg="rgba(99,102,241,0.07)" border="rgba(99,102,241,0.25)" textColor="#6366f1"
+                    bg="linear-gradient(135deg,#6366f1,#4f46e5)" textColor="#fff"
                     icon="📄" label="Invoice PDF Download Karo"
-                    sub="Print ya save karo"/>
+                    sub="Customer ko PDF share karo — print ya WhatsApp pe"/>\
 
-                  {/* 5. Home */}
+                  {/* 2. Warranty Card PNG download (only if warranty) */}
+                  {hasWarranty && (
+                    <ActionBtn onClick={()=>generateWarrantyCard(getWarrantyCustomerObj())}
+                      bg="linear-gradient(135deg,#1a2a4a,#2d4a7a)" textColor="#fff"
+                      icon="🛡️"
+                      label="Warranty Card Download Karo"
+                      sub={`${sForm.warrantyPeriod} — PNG image, print ya WhatsApp pe bhejo`}/>
+                  )}
+
+                  {/* 3. Home */}
                   <ActionBtn onClick={goHome}
                     bg="#f8fafc" border="#e2e8f0" textColor="#64748b"
                     icon="🏠" label="Home Pe Wapas Jao"/>

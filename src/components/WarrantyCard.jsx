@@ -1,184 +1,254 @@
 // src/components/WarrantyCard.jsx
-// Warranty Card = actual IMAGE (PNG) using HTML Canvas
-// Downloads as photo → WhatsApp pe photo ki tarah bhejo!
+// Professional warranty card — white card, navy header, gold accents (like the image)
 
-function roundRect(ctx, x, y, w, h, r, color) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-  ctx.fillStyle = color;
-  ctx.fill();
-}
-
-function wrapText(ctx, text, maxWidth) {
-  const words = String(text || "").split(" ");
-  const lines = [];
-  let cur = "";
-  for (const w of words) {
-    const test = cur ? cur + " " + w : w;
-    if (ctx.measureText(test).width > maxWidth && cur) { lines.push(cur); cur = w; }
-    else cur = test;
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = String(text || "—").split(" ");
+  let line = "";
+  let lines = [];
+  for (const word of words) {
+    const test = line ? line + " " + word : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+    } else line = test;
   }
-  if (cur) lines.push(cur);
-  return lines;
+  if (line) lines.push(line);
+  lines.forEach((l, i) => ctx.fillText(l, x, y + i * lineHeight));
+  return lines.length;
 }
 
 export function generateWarrantyCard(customer) {
-  const W = 920, H = 540;
+  // Portrait card — like a real service warranty card
+  const W = 680, H = 960;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
 
-  const DARK = "#0d1117", CARD = "#161b22", LIGHT = "#1c2230";
-  const YELLOW = "#f5c518", GREEN = "#00d68f", WHITE = "#ffffff", GRAY = "#8b949e";
+  const NAVY   = "#1a2a4a";
+  const GOLD   = "#c9941a";
+  const GOLD2  = "#f0c040";
+  const WHITE  = "#ffffff";
+  const OFFWHITE = "#f7f5f0";
+  const LIGHT  = "#eef2f8";
+  const DARK   = "#1a1a2e";
+  const TEXT   = "#1e293b";
+  const SUBTEXT = "#64748b";
+  const DIVIDER = "#dde3ec";
 
-  // ── BG ──
-  roundRect(ctx, 0, 0, W, H, 16, CARD);
+  const co      = customer.companyName    || "Matoshree Enterprises";
+  const phone   = customer.companyPhone   || "";
+  const phone2  = customer.companyPhone2  || "";
+  const email   = customer.companyEmail   || "";
+  const address = customer.companyAddress || "";
+  const sig     = customer.signatureBase64 || null;
+  const techName = customer.technicianName || "";
 
-  // Yellow left strip
-  roundRect(ctx, 0, 0, 9, H, 0, YELLOW);
+  // ── BACKGROUND ──
+  ctx.fillStyle = OFFWHITE;
+  ctx.fillRect(0, 0, W, H);
 
-  // ── HEADER ──
-  roundRect(ctx, 9, 0, W - 9, 88, 0, DARK);
+  // ── TOP NAVY HEADER ──
+  // Main header block
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, 0, W, 160);
 
-  // Logo
-  roundRect(ctx, 22, 12, 60, 60, 30, YELLOW);
-  ctx.fillStyle = DARK; ctx.font = "bold 30px Arial"; ctx.textAlign = "center";
-  ctx.fillText("E", 52, 50);
+  // Gold diagonal accent stripe in header
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(W - 220, 0);
+  ctx.lineTo(W, 0);
+  ctx.lineTo(W, 160);
+  ctx.lineTo(W - 120, 160);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(201,148,26,0.18)";
+  ctx.fill();
+  ctx.restore();
 
+  // Gold bottom border on header
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(0, 155, W, 5);
+
+  // Logo circle
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(62, 80, 42, 0, Math.PI * 2);
+  ctx.fillStyle = GOLD;
+  ctx.fill();
+  ctx.strokeStyle = WHITE;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+
+  // Lightning bolt in logo
+  ctx.fillStyle = NAVY;
+  ctx.font = "bold 38px serif";
+  ctx.textAlign = "center";
+  ctx.fillText("⚡", 62, 93);
+
+  // Company name
   ctx.textAlign = "left";
-  ctx.fillStyle = WHITE; ctx.font = "bold 28px 'Segoe UI', Arial";
-  ctx.fillText("ElectroServe", 96, 40);
-  ctx.fillStyle = YELLOW; ctx.font = "14px 'Segoe UI', Arial";
-  ctx.fillText("Professional Electrician Services", 97, 62);
+  ctx.fillStyle = WHITE;
+  ctx.font = "bold 26px Georgia, serif";
+  ctx.fillText(co.toUpperCase(), 122, 72);
 
-  ctx.textAlign = "right";
-  ctx.fillStyle = YELLOW; ctx.font = "bold 14px 'Segoe UI', Arial";
-  ctx.fillText("WARRANTY CERTIFICATE", W - 22, 30);
-  const certNo = "WC-" + String(customer.id || "0001").padStart(4, "0") + "-" + new Date().getFullYear();
-  ctx.fillStyle = GRAY; ctx.font = "12px Arial";
-  ctx.fillText(certNo, W - 22, 50);
-  ctx.fillText("Issued: " + new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" }), W - 22, 70);
+  // Subtitle
+  ctx.fillStyle = GOLD2;
+  ctx.font = "italic 14px Georgia, serif";
+  ctx.fillText("SERVICE WARRANTY", 122, 100);
+
+  // Gold line under subtitle
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(122, 112, 200, 2);
+
+  // ── CERTIFICATE TITLE BAND ──
+  ctx.fillStyle = LIGHT;
+  ctx.fillRect(0, 160, W, 52);
+  ctx.fillStyle = NAVY;
+  ctx.font = "bold 15px Georgia, serif";
+  ctx.textAlign = "center";
+  ctx.fillText("WARRANTY CERTIFICATE", W / 2, 192);
   ctx.textAlign = "left";
 
-  // Yellow line
-  ctx.fillStyle = YELLOW; ctx.fillRect(9, 88, W - 9, 4);
+  // ── CARD BODY ──
+  // White content area
+  ctx.fillStyle = WHITE;
+  ctx.shadowColor = "rgba(0,0,0,0.07)";
+  ctx.shadowBlur = 10;
+  ctx.fillRect(32, 228, W - 64, H - 310);
+  ctx.shadowBlur = 0;
 
-  // ── LEFT: CUSTOMER ──
-  const lx = 24, ly = 104;
-  roundRect(ctx, lx, ly, 268, 136, 8, LIGHT);
-  roundRect(ctx, lx, ly, 268, 34, 8, DARK);
-  ctx.fillRect(lx, ly + 17, 268, 17);
-  ctx.fillStyle = YELLOW; ctx.font = "bold 10px Arial";
-  ctx.fillText("CUSTOMER DETAILS", lx + 12, ly + 22);
+  // Thin gold left border on white card
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(32, 228, 4, H - 310);
 
-  ctx.fillStyle = WHITE; ctx.font = "bold 16px 'Segoe UI', Arial";
-  ctx.fillText(customer.name || "—", lx + 12, ly + 58);
-  ctx.fillStyle = GRAY; ctx.font = "12px Arial";
-  ctx.fillText("+91 " + (customer.mobile || "—"), lx + 12, ly + 78);
-  const addrLines = wrapText(ctx, customer.address || "—", 244);
-  addrLines.slice(0, 2).forEach((line, i) => ctx.fillText(line, lx + 12, ly + 97 + i * 18));
+  // ── CONTENT ROWS ──
+  const cx = 60;
+  let cy = 262;
+  const labelColor = SUBTEXT;
+  const valueColor = TEXT;
 
-  // ── LEFT: MACHINE ──
-  const mly = ly + 148;
-  roundRect(ctx, lx, mly, 268, 148, 8, LIGHT);
-  roundRect(ctx, lx, mly, 268, 34, 8, DARK);
-  ctx.fillRect(lx, mly + 17, 268, 17);
-  ctx.fillStyle = YELLOW; ctx.font = "bold 10px Arial";
-  ctx.fillText("MACHINE DETAILS", lx + 12, mly + 22);
-
-  const mRows = [
-    ["Type",   customer.machineType],
-    ["Brand",  customer.machineBrand],
-    ["Model",  customer.model],
-    ["Serial", customer.serialNumber],
-  ];
-  mRows.forEach(([k, v], i) => {
-    ctx.fillStyle = GRAY;   ctx.font = "11px Arial";  ctx.fillText(k + ":", lx + 12, mly + 56 + i * 26);
-    ctx.fillStyle = WHITE;  ctx.font = "bold 13px Arial"; ctx.fillText(v || "—", lx + 68, mly + 56 + i * 26);
-  });
-
-  // ── MIDDLE: SERVICE ──
-  const sx = 308, sy = ly;
-  roundRect(ctx, sx, sy, 268, 295, 8, LIGHT);
-  roundRect(ctx, sx, sy, 268, 34, 8, DARK);
-  ctx.fillRect(sx, sy + 17, 268, 17);
-  ctx.fillStyle = YELLOW; ctx.font = "bold 10px Arial";
-  ctx.fillText("SERVICE PERFORMED", sx + 12, sy + 22);
-
-  ctx.fillStyle = GRAY; ctx.font = "bold 11px Arial";
-  ctx.fillText("Service Date:", sx + 12, sy + 55);
-  ctx.fillStyle = WHITE; ctx.font = "bold 15px 'Segoe UI', Arial";
-  const sDate = customer.serviceDate
-    ? new Date(customer.serviceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })
-    : "—";
-  ctx.fillText(sDate, sx + 12, sy + 76);
-
-  ctx.fillStyle = GRAY; ctx.font = "bold 11px Arial";
-  ctx.fillText("Work Done:", sx + 12, sy + 105);
-  ctx.fillStyle = WHITE; ctx.font = "12px Arial";
-  const workLines = wrapText(ctx, customer.serviceDetails || "General service performed", 244);
-  workLines.slice(0, 8).forEach((line, i) => ctx.fillText(line, sx + 12, sy + 123 + i * 20));
-
-  if (customer.notes) {
-    ctx.fillStyle = YELLOW; ctx.font = "bold 10px Arial";
-    ctx.fillText("Note: " + customer.notes, sx + 12, sy + 282);
+  function row(label, value, bold = false) {
+    ctx.fillStyle = labelColor;
+    ctx.font = "13px Georgia, serif";
+    ctx.fillText(label, cx, cy);
+    ctx.fillStyle = bold ? NAVY : valueColor;
+    ctx.font = bold ? "bold 16px Georgia, serif" : "15px Georgia, serif";
+    ctx.fillText(value || "—", cx + 160, cy);
+    cy += 36;
   }
 
-  // ── RIGHT: WARRANTY BOX (the star!) ──
-  const wx = 592, wy = ly;
-  roundRect(ctx, wx, wy, 300, 295, 12, YELLOW);
+  function divLine() {
+    ctx.fillStyle = DIVIDER;
+    ctx.fillRect(cx, cy - 10, W - 88, 1);
+    cy += 10;
+  }
 
-  ctx.fillStyle = DARK; ctx.font = "bold 18px 'Segoe UI', Arial"; ctx.textAlign = "center";
-  ctx.fillText("WARRANTY", wx + 150, wy + 44);
-  ctx.fillText("CERTIFICATE", wx + 150, wy + 68);
+  // Customer
+  ctx.fillStyle = GOLD;
+  ctx.font = "bold 11px Georgia, serif";
+  ctx.fillText("CUSTOMER DETAILS", cx, cy);
+  cy += 22;
+  divLine();
 
-  ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.fillRect(wx + 24, wy + 80, 252, 2);
+  ctx.fillStyle = valueColor;
+  ctx.font = "bold 18px Georgia, serif";
+  ctx.fillText("Mr. / Ms. " + (customer.name || "—"), cx, cy);
+  cy += 32;
 
-  ctx.fillStyle = DARK; ctx.font = "bold 12px Arial";
-  ctx.fillText("VALID TILL", wx + 150, wy + 106);
+  row("Phone:", customer.mobile ? "+91 " + customer.mobile : "—");
+  row("Address:", customer.address || "—");
 
-  ctx.font = "bold 22px 'Segoe UI', Arial";
+  cy += 8;
+  divLine();
+
+  // Machine / Service
+  ctx.fillStyle = GOLD;
+  ctx.font = "bold 11px Georgia, serif";
+  ctx.fillText("SERVICE PROVIDED", cx, cy);
+  cy += 22;
+  divLine();
+
+  row("Machine:", (customer.machineType || "") + " — " + (customer.machineBrand || ""));
+  if (customer.serialNumber) row("Serial No:", customer.serialNumber);
+  row("Service:", customer.serviceDetails || "—");
+
+  // Valid Till — highlighted
+  cy += 6;
+  divLine();
+  ctx.fillStyle = GOLD;
+  ctx.font = "bold 11px Georgia, serif";
+  ctx.fillText("WARRANTY VALIDITY", cx, cy);
+  cy += 24;
+
+  ctx.fillStyle = labelColor;
+  ctx.font = "13px Georgia, serif";
+  ctx.fillText("Valid Till:", cx, cy);
+
   const wEnd = customer.warrantyEnd
-    ? new Date(customer.warrantyEnd).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+    ? new Date(customer.warrantyEnd).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })
     : "—";
-  ctx.fillText(wEnd, wx + 150, wy + 133);
+  ctx.fillStyle = NAVY;
+  ctx.font = "bold 22px Georgia, serif";
+  ctx.fillText(wEnd, cx + 160, cy);
+  cy += 38;
 
-  // Period badge
-  roundRect(ctx, wx + 60, wy + 144, 180, 32, 16, "rgba(0,0,0,0.15)");
-  ctx.fillStyle = DARK; ctx.font = "bold 14px Arial";
-  ctx.fillText(customer.warrantyPeriod || "—", wx + 150, wy + 165);
+  // ── SIGNATURE AREA ──
+  cy += 8;
+  divLine();
 
-  ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.fillRect(wx + 24, wy + 188, 252, 2);
+  ctx.fillStyle = labelColor;
+  ctx.font = "13px Georgia, serif";
+  ctx.fillText("Technician:", cx, cy + 4);
 
-  ctx.fillStyle = DARK; ctx.font = "bold 10px Arial";
-  ctx.fillText("CERTIFICATE NO.", wx + 150, wy + 210);
-  ctx.font = "bold 15px Arial"; ctx.fillText(certNo, wx + 150, wy + 232);
+  if (sig && sig.startsWith("data:image")) {
+    // Draw signature image
+    const img = new Image();
+    img.src = sig;
+    ctx.drawImage(img, cx + 155, cy - 28, 140, 48);
+  } else {
+    // Handwriting-style tech name
+    ctx.fillStyle = DARK;
+    ctx.font = "italic 20px Georgia, serif";
+    ctx.fillText(techName || co, cx + 160, cy + 4);
+  }
 
-  // ACTIVE badge
-  roundRect(ctx, wx + 60, wy + 244, 180, 38, 10, "#006b40");
-  ctx.fillStyle = WHITE; ctx.font = "bold 16px Arial";
-  ctx.fillText("ACTIVE", wx + 150, wy + 268);
+  // Signature underline
+  ctx.fillStyle = DARK;
+  ctx.fillRect(cx + 155, cy + 14, 160, 1);
+  ctx.fillStyle = SUBTEXT;
+  ctx.font = "10px Georgia, serif";
+  ctx.fillText("Authorised Signature", cx + 160, cy + 28);
+
+  cy += 50;
+
+  // ── BLUE FOOTER ──
+  const fy = H - 145;
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, fy, W, 145);
+
+  // Gold top border
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(0, fy, W, 4);
+
+  ctx.fillStyle = WHITE;
+  ctx.font = "bold 13px Georgia, serif";
   ctx.textAlign = "left";
+  ctx.fillText("For Service", 36, fy + 32);
 
-  // ── FOOTER ──
-  const fy = H - 68;
-  roundRect(ctx, 9, fy, W - 9, 60, 0, DARK);
-  ctx.fillStyle = YELLOW; ctx.fillRect(9, fy, W - 9, 3);
-  ctx.fillStyle = YELLOW; ctx.font = "bold 13px Arial";
-  ctx.fillText("⚡ ElectroServe", 28, fy + 28);
-  ctx.fillStyle = GRAY; ctx.font = "11px Arial";
-  ctx.fillText("This warranty covers service by ElectroServe. Physical/accidental damage not included.", 28, fy + 48);
+  ctx.fillStyle = GOLD2;
+  ctx.font = "14px Georgia, serif";
+  let fy2 = fy + 56;
+  if (phone)   { ctx.fillText("📞  " + phone,   36, fy2); fy2 += 24; }
+  if (phone2)  { ctx.fillText("📞  " + phone2,  36, fy2); fy2 += 24; }
+  if (email)   { ctx.fillText("✉   " + email,   36, fy2); fy2 += 24; }
+  if (address) { ctx.fillText("📍  " + address, 36, fy2); }
+
+  // Cert number bottom right
+  const certNo = "WC-" + String(customer.id || "0001").padStart(4, "0") + "-" + new Date().getFullYear();
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.font = "11px Georgia, serif";
   ctx.textAlign = "right";
-  ctx.fillText("Save this card for future reference.", W - 22, fy + 48);
+  ctx.fillText(certNo, W - 36, H - 18);
   ctx.textAlign = "left";
 
   // ── DOWNLOAD ──
