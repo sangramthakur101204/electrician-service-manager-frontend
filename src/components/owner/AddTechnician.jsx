@@ -183,15 +183,25 @@ export default function AddTechnician() {
 
   useEffect(() => { fetchAll(); }, []);
 
+  // Auto-refresh technician list every 15s — keeps Active/Inactive badge live
+  useEffect(() => {
+    const poll = setInterval(() => fetchAll(), 15000);
+    return () => clearInterval(poll);
+  }, []);
+
   // Active time — recalculate every 30s so it stays live
   useEffect(() => {
     const t = setInterval(() => {
       setTodayActive(prev => {
         const updated = { ...prev };
         Object.keys(updated).forEach(id => {
-          if (updated[id].lastStatus === "ACTIVE" && updated[id].activeStartedAt) {
-            const sessionMins = Math.max(0, Math.floor((Date.now() - new Date(updated[id].activeStartedAt).getTime()) / 60000));
-            updated[id] = { ...updated[id], todayMins: (updated[id].base || 0) + sessionMins };
+          if (updated[id].lastStatus === "ACTIVE") {
+            // Find the tech to get activeStartedAt
+            const tech = techs.find(t => String(t.id) === String(id));
+            if (tech?.activeStartedAt) {
+              const mins = Math.max(0, Math.floor((Date.now() - new Date(tech.activeStartedAt).getTime()) / 60000));
+              updated[id] = { ...updated[id], todayMins: mins };
+            }
           }
         });
         return updated;
@@ -209,17 +219,12 @@ export default function AddTechnician() {
       ]);
       setTechs(techData);
       setAllInvoices(Array.isArray(invData) ? invData : []);
-      // Build activeMap from todayActiveMins (DB) + current session if active
+      // Compute activeMins from activeStartedAt field on User
       const activeMap = {};
       techData.forEach(t => {
-        const base = t.todayActiveMins || 0;  // already completed sessions today
         if (t.isActive && t.activeStartedAt) {
-          // Currently active: base + current running session
-          const sessionMins = Math.max(0, Math.floor((Date.now() - new Date(t.activeStartedAt).getTime()) / 60000));
-          activeMap[t.id] = { todayMins: base + sessionMins, lastStatus: "ACTIVE", base, activeStartedAt: t.activeStartedAt };
-        } else if (base > 0) {
-          // Was active earlier today
-          activeMap[t.id] = { todayMins: base, lastStatus: "DONE" };
+          const mins = Math.max(0, Math.floor((Date.now() - new Date(t.activeStartedAt).getTime()) / 60000));
+          activeMap[t.id] = { todayMins: mins, lastStatus: "ACTIVE" };
         }
       });
       setTodayActive(activeMap);
@@ -323,11 +328,9 @@ export default function AddTechnician() {
             const totalEarned = techInvs.reduce((s,i)=>s+(i.totalAmount||0),0);
             const todayStr = new Date().toLocaleDateString("en-CA");
             const todayEarned = techInvs.filter(i=>i.invoiceDate===todayStr).reduce((s,i)=>s+(i.totalAmount||0),0);
-            // Show "Currently Active" only if really active with a valid session
-            const isReallyActive = t.isActive && t.activeStartedAt;
-            const lastActiveTime = isReallyActive ? "🟢 Currently Active"
-              : (lastStatus && lastStatus !== "ACTIVE") ? `Last active: ${fmtTime(lastStatus)}`
-              : null;
+            const lastActiveTime = lastStatus && lastStatus !== "ACTIVE"
+              ? `Last active: ${fmtTime(lastStatus)}`
+              : lastStatus === "ACTIVE" ? "🟢 Currently Active" : null;
 
             return (
               <div key={t.id} style={{background:"#fff",border:`1.5px solid ${color}25`,borderTop:`3px solid ${color}`,borderRadius:16,overflow:"hidden",boxShadow:"0 2px 10px rgba(0,0,0,0.06)",opacity:t.isActive?1:0.75}}>
@@ -345,7 +348,7 @@ export default function AddTechnician() {
                     )}
                   </div>
                   <span style={{padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700,background:t.isActive?"rgba(16,185,129,0.1)":"rgba(239,68,68,0.08)",color:t.isActive?"#059669":"#ef4444",flexShrink:0}}>
-                    {t.isActive && t.activeStartedAt ? "🟢 Active" : "🔴 Inactive"}
+                    {t.isActive?"🟢 Active":"🔴 Inactive"}
                   </span>
                 </div>
 

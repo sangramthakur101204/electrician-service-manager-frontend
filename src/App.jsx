@@ -271,10 +271,6 @@ export default function App() {
               <Bell size={14} /> {expiring.length} Alert
             </button>
           )}
-          <button className="topbar-refresh-btn" onClick={() => fetchAll(true)} disabled={refreshing}>
-            <RefreshCw size={14} className={refreshing ? "spin" : ""} />
-            <span>{refreshing ? "..." : "Refresh"}</span>
-          </button>
           <div className="topbar-user">
             <div className="topbar-user-avatar">{user.name?.[0]?.toUpperCase()}</div>
             <div>
