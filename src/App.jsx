@@ -129,7 +129,7 @@ export default function App() {
   // MOBILE LAYOUT — Owner gets dedicated mobile app
   // ══════════════════════════════════════════════════════
   if (isMobile) {
-    return <OwnerMobile user={user} onLogout={handleLogout} />;
+    return <ErrorBoundary><OwnerMobile user={user} onLogout={handleLogout} /></ErrorBoundary>;
   }
   if (false) {
     return (
