@@ -1015,7 +1015,6 @@ export default function TechApp({ user, onLogout }) {
                     bg="#f8fafc" border="#e2e8f0" textColor="#64748b"
                     icon="🏠" label="Home Pe Wapas Jao"/>
                 </div>
-                </div>
 
                 {/* Invoice items */}
                 <div style={{background:"#fff",border:"1px solid #e2e8f0",borderRadius:14,padding:16}}>
