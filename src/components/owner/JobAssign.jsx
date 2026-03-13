@@ -747,10 +747,9 @@ export default function JobAssign() {
             <h3 style={{ fontSize:20, fontWeight:800, marginBottom:8 }}>Job Create Ho Gaya!</h3>
             <p style={{ fontSize:13, color:"#64748b", marginBottom:24 }}>Technician ko WhatsApp pe bhejo?</p>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              <a href={waUrl} target="_blank" rel="noreferrer"
-                style={{ display:"block", padding:"14px", background:"#25d366", color:"#fff", borderRadius:12, fontWeight:800, fontSize:15, textDecoration:"none" }}>
+              <button onClick={()=>openExternal(waUrl)} style={{ display:"block", padding:"14px", background:"#25d366", color:"#fff", borderRadius:12, fontWeight:800, fontSize:15, border:"none", cursor:"pointer", width:"100%" }}>
                 💬 WhatsApp bhejo
-              </a>
+              </button>
               <button onClick={() => { setWaUrl(""); setShowForm(false); resetForm(); }}
                 style={{ padding:"12px", background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:12, fontWeight:600, color:"#64748b", cursor:"pointer" }}>
                 Skip
@@ -768,11 +767,10 @@ export default function JobAssign() {
             <div style={{ fontWeight:800, fontSize:18, color:"#1e293b", marginBottom:8 }}>Google Maps pe Navigate Karo?</div>
             <div style={{ fontSize:13, color:"#64748b", marginBottom:20, lineHeight:1.5 }}>Technician ko customer ke ghar ka raasta dikhana hai?</div>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              <a href={mapsRedirectUrl} target="_blank" rel="noreferrer"
-                onClick={() => setShowMapsPopup(false)}
-                style={{ padding:"13px", borderRadius:12, background:"linear-gradient(135deg,#3b82f6,#2563eb)", color:"#fff", fontWeight:800, fontSize:14, textDecoration:"none", display:"block" }}>
+              <button onClick={() => { openExternal(mapsRedirectUrl); setShowMapsPopup(false); }}
+                style={{ padding:"13px", borderRadius:12, background:"linear-gradient(135deg,#3b82f6,#2563eb)", color:"#fff", fontWeight:800, fontSize:14, border:"none", cursor:"pointer", display:"block", width:"100%" }}>
                 🚗 Google Maps Kholo
-              </a>
+              </button>
               <button onClick={() => setShowMapsPopup(false)}
                 style={{ padding:"11px", borderRadius:12, border:"1.5px solid #e2e8f0", background:"#f8fafc", color:"#64748b", fontWeight:700, fontSize:13, cursor:"pointer" }}>
                 Baad Mein
@@ -790,11 +788,10 @@ export default function JobAssign() {
             <h3 style={{ fontSize:18, fontWeight:800, marginBottom:6 }}>Technician Assign Ho Gaya!</h3>
             <p style={{ fontSize:13, color:"#64748b", marginBottom:20 }}>Customer ko confirm message bhejoge? Tech details aur schedule jayega.</p>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              <a href={assignWaUrl} target="_blank" rel="noreferrer"
-                onClick={() => setAssignWaUrl("")}
-                style={{ display:"block", padding:"13px", background:"#25d366", color:"#fff", borderRadius:12, fontWeight:800, fontSize:14, textDecoration:"none" }}>
+              <button onClick={() => { openExternal(assignWaUrl); setAssignWaUrl(""); }}
+                style={{ display:"block", padding:"13px", background:"#25d366", color:"#fff", borderRadius:12, fontWeight:800, fontSize:14, border:"none", cursor:"pointer", width:"100%" }}>
                 💬 Customer ko WA bhejo
-              </a>
+              </button>
               <button onClick={() => setAssignWaUrl("")}
                 style={{ padding:"11px", background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:12, fontWeight:600, color:"#64748b", cursor:"pointer", fontSize:13 }}>
                 Skip
@@ -928,11 +925,10 @@ function JobCard({ job, onDelete, onCancel, technicians = [], jobs = [], onAssig
         {/* Bottom row: WA + Cancel + Delete */}
         <div style={{ display:"flex", gap:8, alignItems:"center", marginTop: isOwnerActionable ? 8 : 0 }}>
           {mobile && (
-            <a href={"https://wa.me/91"+mobile+"?text="+encodeURIComponent("Aapki service ki update — "+(companySettings?.companyName||"Matoshree Enterprises"))}
-              target="_blank" onClick={(e)=>{e.preventDefault();openExternal(e.currentTarget.href)}} rel="noreferrer"
-              style={{ padding:"6px 12px", background:"rgba(37,211,102,0.1)", color:"#25d366", borderRadius:8, fontSize:12, fontWeight:600, textDecoration:"none" }}>
+            <button onClick={()=>openExternal("https://wa.me/91"+mobile+"?text="+encodeURIComponent("Aapki service ki update — "+(companySettings?.companyName||"Matoshree Enterprises")))}
+              style={{ padding:"6px 12px", background:"rgba(37,211,102,0.1)", color:"#25d366", borderRadius:8, fontSize:12, fontWeight:600, border:"none", cursor:"pointer" }}>
               💬 WA
-            </a>
+            </button>
           )}
           {/* Cancel — only for active jobs (not already done/cancelled) */}
           {!["DONE","CANCELLED"].includes(job.status) && (

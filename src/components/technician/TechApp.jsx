@@ -1291,7 +1291,7 @@ function ActionBtn({href,onClick,bg,border,textColor,icon,label,sub,style}) {
     </div>
   </>;
   return href
-    ? <a href={href} target="_blank" rel="noreferrer" style={s}>{inner}</a>
+    ? <button onClick={()=>openExternal(href)} style={s}>{inner}</button>
     : <button onClick={onClick} style={s}>{inner}</button>;
 }
 function JobCard({job,onClick}) {

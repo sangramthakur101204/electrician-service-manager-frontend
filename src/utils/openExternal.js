@@ -1,29 +1,27 @@
+import { Browser } from "@capacitor/browser";
+
 // Capacitor-safe external link opener
-// Har jagah window.open("url", "_blank") ki jagah openExternal("url") use karo
-export function openExternal(url) {
+export async function openExternal(url) {
   try {
-    if (window.Capacitor?.Plugins?.Browser) {
-      window.Capacitor.Plugins.Browser.open({ url });
-      return;
-    }
-  } catch(e) {}
-  // Web + Android WebView fallback
-  try { window.open(url, "_system"); }
-  catch(e) { window.location.href = url; }
+    await Browser.open({ url });
+  } catch (e) {
+    // Web fallback
+    window.open(url, "_blank");
+  }
 }
 
-// Blob file download — APK mein a.click() kaam nahi karta
+// Capacitor-safe blob download
 export function downloadBlob(blob, filename) {
   try {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
+    a.style.display = "none";
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  } catch(e) {
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 3000);
+  } catch (e) {
     console.error("Download failed:", e);
   }
 }

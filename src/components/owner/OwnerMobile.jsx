@@ -301,10 +301,10 @@ function JobCardMobile({ job, technicians, jobs, onAssign, onCancel, compName="M
           </a>
         )}
         {mob && (
-          <a href={`https://wa.me/91${mob}?text=${encodeURIComponent("Namaste! "+compName+" se service update — job status: "+STATUS_COLOR[job.status]?.label)}`} target="_blank" rel="noreferrer"
-            style={{ padding:"7px 14px", background:"rgba(37,211,102,0.1)", color:"#16a34a", borderRadius:8, fontSize:13, fontWeight:700, textDecoration:"none" }}>
+          <button onClick={()=>openExternal(`https://wa.me/91${mob}?text=${encodeURIComponent("Namaste! "+compName+" se service update — job status: "+STATUS_COLOR[job.status]?.label)}`)}
+            style={{ padding:"7px 14px", background:"rgba(37,211,102,0.1)", color:"#16a34a", borderRadius:8, fontSize:13, fontWeight:700, border:"none", cursor:"pointer" }}>
             💬 WA
-          </a>
+          </button>
         )}
         {["NEW","ASSIGNED"].includes(job.status) && (
           <button onClick={() => setShowAssign(v=>!v)}
@@ -553,8 +553,8 @@ function CustomersTab({ customers, onRefresh, toast }) {
           {c.warrantyPeriod && c.warrantyPeriod!=="No Warranty" && <div style={{ fontSize:12, color:"#8b5cf6", marginTop:2 }}>🛡️ {c.warrantyPeriod} · till {c.warrantyEnd}</div>}
           <div style={{ marginTop:8, display:"flex", gap:8 }}>
             <a href={`tel:${c.mobile}`} style={{ padding:"6px 12px", background:"rgba(16,185,129,0.1)", color:"#059669", borderRadius:8, fontSize:12, fontWeight:700, textDecoration:"none" }}>📞 Call</a>
-            <a href={`https://wa.me/91${c.mobile}`} target="_blank" rel="noreferrer"
-              style={{ padding:"6px 12px", background:"rgba(37,211,102,0.1)", color:"#16a34a", borderRadius:8, fontSize:12, fontWeight:700, textDecoration:"none" }}>💬 WA</a>
+            <button onClick={()=>openExternal(`https://wa.me/91${c.mobile}`)}
+              style={{ padding:"6px 12px", background:"rgba(37,211,102,0.1)", color:"#16a34a", borderRadius:8, fontSize:12, fontWeight:700, border:"none", cursor:"pointer" }}>💬 WA</button>
           </div>
         </div>
       ))}
