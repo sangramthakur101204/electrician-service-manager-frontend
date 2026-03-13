@@ -21,6 +21,7 @@ function drawCard(ctx, customer, W, H) {
   const WHITE   = "#ffffff";
   const OFFWHITE= "#f7f4ee";
   const LIGHT   = "#eef2f8";
+  const DARK    = "#1a1a2e";
   const TEXT    = "#1e293b";
   const SUBTEXT = "#64748b";
   const DIVIDER = "#dde3ec";
