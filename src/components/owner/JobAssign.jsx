@@ -898,7 +898,7 @@ function JobCard({ job, onDelete, onCancel, technicians = [], jobs = [], onAssig
         {/* Bottom row: WA + Cancel + Delete */}
         <div style={{ display:"flex", gap:8, alignItems:"center", marginTop: isOwnerActionable ? 8 : 0 }}>
           {mobile && (
-            <a href={`https://wa.me/91${mobile}?text=${encodeURIComponent(`Aapki service ki update — ${companySettings?.companyName || "Matoshree Enterprises"}`)}`}
+            <a href={"https://wa.me/91"+mobile+"?text="+encodeURIComponent("Aapki service ki update — "+(companySettings?.companyName||"Matoshree Enterprises"))}
               target="_blank" rel="noreferrer"
               style={{ padding:"6px 12px", background:"rgba(37,211,102,0.1)", color:"#25d366", borderRadius:8, fontSize:12, fontWeight:600, textDecoration:"none" }}>
               💬 WA

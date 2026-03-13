@@ -6,7 +6,6 @@ import {
   RefreshCw, MapPin, Settings as SettingsIcon, X
 } from "lucide-react";
 import Login          from "./components/Login";
-import ErrorBoundary  from "./components/ErrorBoundary";
 import OwnerDashboard from "./components/owner/OwnerDashboard";
 import CustomerList   from "./components/CustomerList";
 import Reminders      from "./components/Reminders";
@@ -17,7 +16,6 @@ import AllInvoices    from "./components/owner/AllInvoices";
 import LiveTracking   from "./components/owner/LiveTracking";
 import TechApp        from "./components/technician/TechApp";
 import Settings       from "./components/owner/Settings";
-import OwnerMobile    from "./components/owner/OwnerMobile";
 import { getAllCustomers, getExpiringWarranty } from "./services/api";
 import "./App.css";
 
@@ -102,8 +100,8 @@ export default function App() {
     setShowMore(false);
   };
 
-  if (!user) return <ErrorBoundary><Login onLogin={handleLogin} /></ErrorBoundary>;
-  if (user.role === "TECHNICIAN") return <ErrorBoundary><TechApp user={user} onLogout={handleLogout} /></ErrorBoundary>;
+  if (!user) return <Login onLogin={handleLogin} />;
+  if (user.role === "TECHNICIAN") return <TechApp user={user} onLogout={handleLogout} />;
 
   // ── CONTENT (same for desktop + mobile) ──────────────────────────────────
   const content = loading ? (
@@ -126,12 +124,9 @@ export default function App() {
   );
 
   // ══════════════════════════════════════════════════════
-  // MOBILE LAYOUT — Owner gets dedicated mobile app
+  // MOBILE LAYOUT
   // ══════════════════════════════════════════════════════
   if (isMobile) {
-    return <ErrorBoundary><OwnerMobile user={user} onLogout={handleLogout} /></ErrorBoundary>;
-  }
-  if (false) {
     return (
       <div style={{ background:"var(--bg-primary)", fontFamily:"var(--font-body)" }} className="mobile-root">
 
@@ -251,7 +246,6 @@ export default function App() {
   // DESKTOP LAYOUT (unchanged)
   // ══════════════════════════════════════════════════════
   return (
-    <ErrorBoundary>
     <div className="app-shell">
       <header className="topbar">
         <div className="topbar-logo">
@@ -296,6 +290,5 @@ export default function App() {
         </div>
       </main>
     </div>
-    </ErrorBoundary>
   );
 }

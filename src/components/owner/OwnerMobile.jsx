@@ -86,10 +86,8 @@ export default function OwnerMobile({ user, onLogout }) {
         apiFetch(`${API}/jobs`,     { headers: authHeader() }),
         apiFetch(`${API}/customers`,{ headers: authHeader() }),
       ]);
-      const jd = jobRes.ok  ? await jobRes.json()  : [];
-      const cd = cusRes.ok  ? await cusRes.json()  : [];
-      setJobs(      Array.isArray(jd) ? jd : []);
-      setCustomers( Array.isArray(cd) ? cd : []);
+      setJobs(await jobRes.json());
+      setCustomers(await cusRes.json());
     } catch(e) {}
   };
 
@@ -224,15 +222,11 @@ function JobsTab({ jobs, technicians, onRefresh, toast, compName }) {
         method:"PUT", headers: authHeader(),
         body: JSON.stringify({ technicianId: Number(techId) }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        onRefresh();
-        toast("✅ Assigned!", "success");
-        if (data.whatsappUrl) window.open(data.whatsappUrl, "_blank");
-      } else {
-        toast("Assign nahi hua, dobara try karo", "error");
-      }
-    } catch(e) { toast("Error: " + (e?.message||""), "error"); }
+      const data = await res.json();
+      onRefresh();
+      toast("✅ Assigned!", "success");
+      if (data.whatsappUrl) window.open(data.whatsappUrl, "_blank");
+    } catch(e) { toast("Error", "error"); }
   };
 
   const cancelJob = async (jobId) => {
