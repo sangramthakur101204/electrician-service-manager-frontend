@@ -51,25 +51,11 @@ const fmt = n => "₹" + Number(n||0).toLocaleString("en-IN");
 
 export default function TechApp({ user, onLogout }) {
   const toast = useToast();
-  const { settings } = useSettings();
+  const { settings, buildFooter: techBuildFooter } = useSettings();
   const compName = () => settings?.companyName || "Matoshree Enterprises";
 
-  // Build WA footer from settings
-  function buildFooter() {
-    const parts = [];
-    if (settings?.companyPhone)  parts.push(`📞 ${settings.companyPhone}`);
-    if (settings?.companyPhone2) parts.push(`📞 ${settings.companyPhone2}`);
-    if (settings?.companyEmail)  parts.push(`✉️ ${settings.companyEmail}`);
-    if (settings?.companyAddress) {
-      parts.push(`📍 ${settings.companyAddress}`);
-      parts.push(`🗺️ https://maps.google.com/?q=${encodeURIComponent(settings.companyAddress)}`);
-    }
-    try {
-      const links = JSON.parse(settings?.linksJson || "[]");
-      links.filter(l=>l.url).forEach(l => parts.push(`🔗 ${l.label ? l.label+": " : ""}${l.url}`));
-    } catch(e) {}
-    return parts.length > 0 ? ("\n\n" + parts.join("\n")) : "";
-  }
+  // Build WA footer from settings via hook
+  function buildFooter() { return techBuildFooter(); }
   const [screen,   setScreen]   = useState("home");
   const [jobs,     setJobs]     = useState([]);
   const [history,  setHistory]  = useState([]);
@@ -486,34 +472,50 @@ export default function TechApp({ user, onLogout }) {
         }}>Logout</button>
       </div>
 
-      {/* ── ACTIVE / INACTIVE TOGGLE ── */}
-      <div style={{ margin:"10px 12px 0", padding:"12px 16px", borderRadius:14,
-        background: isActive ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.06)",
-        border: `1.5px solid ${isActive ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.2)"}`,
-        display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
-        <div>
-          <div style={{ fontWeight:800, fontSize:14, color: isActive ? "#065f46" : "#991b1b" }}>
-            {isActive ? "🟢 Active — Kaam Pe Hoon" : "🔴 Inactive — Kaam Pe Nahi"}
-          </div>
-          {isActive && activeStart && (
-            <div style={{ fontSize:11, color:"#6b7280", marginTop:3 }}>
-              ⏱️ Active time: {fmtActiveMins(activeMins)} · GPS on
-            </div>
-          )}
-          {!isActive && (
-            <div style={{ fontSize:11, color:"#9ca3af", marginTop:3 }}>
-              Active karo tab GPS tracking shuru hogi
-            </div>
-          )}
-        </div>
+      {/* ── ACTIVE + GPS — Two separate buttons ── */}
+      <div style={{ margin:"10px 12px 0", display:"flex", gap:10 }}>
+        {/* Active / Inactive button */}
         <button onClick={toggleActive} style={{
-          padding:"9px 18px", borderRadius:10, border:"none", fontWeight:800, fontSize:13,
-          cursor:"pointer", flexShrink:0,
-          background: isActive ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.15)",
-          color: isActive ? "#ef4444" : "#059669"
+          flex:1, padding:"13px 10px", borderRadius:13, border:"none",
+          fontWeight:800, fontSize:13, cursor:"pointer",
+          background: isActive
+            ? "linear-gradient(135deg,#10b981,#059669)"
+            : "linear-gradient(135deg,#ef4444,#dc2626)",
+          color:"#fff",
+          boxShadow: isActive
+            ? "0 4px 14px rgba(16,185,129,0.35)"
+            : "0 4px 14px rgba(239,68,68,0.3)",
         }}>
-          {isActive ? "⏸️ Inactive" : "▶️ Active"}
+          <div style={{ fontSize:18, marginBottom:2 }}>{isActive ? "🟢" : "🔴"}</div>
+          <div>{isActive ? "Active" : "Inactive"}</div>
+          {isActive && <div style={{ fontSize:10, fontWeight:600, opacity:0.9, marginTop:2 }}>
+            ⏱️ {fmtActiveMins(activeMins)}
+          </div>}
+          {!isActive && <div style={{ fontSize:10, fontWeight:600, opacity:0.9, marginTop:2 }}>
+            Tap to go Active
+          </div>}
         </button>
+
+        {/* GPS status — only visible when active */}
+        <div style={{
+          flex:1, padding:"13px 10px", borderRadius:13,
+          background: isActive
+            ? "linear-gradient(135deg,#3b82f6,#2563eb)"
+            : "#f1f5f9",
+          border: isActive ? "none" : "1.5px solid #e2e8f0",
+          display:"flex", flexDirection:"column", alignItems:"center",
+          justifyContent:"center", gap:2,
+        }}>
+          <div style={{ fontSize:18 }}>{isActive ? "📡" : "📡"}</div>
+          <div style={{ fontWeight:800, fontSize:13,
+            color: isActive ? "#fff" : "#94a3b8" }}>
+            GPS {isActive ? "ON" : "OFF"}
+          </div>
+          <div style={{ fontSize:10, fontWeight:600,
+            color: isActive ? "rgba(255,255,255,0.85)" : "#cbd5e1", marginTop:1 }}>
+            {isActive ? "Tracking Live" : "Inactive pe band"}
+          </div>
+        </div>
       </div>
 
       <div className="tech-mob-stats">
@@ -958,23 +960,32 @@ export default function TechApp({ user, onLogout }) {
     <div className="tech-mobile">
       <div className="tech-mob-header">
         <button className="tech-mob-back" onClick={goHome}>← Back</button>
-        <div className="tech-mob-header-title">Job History</div>
+        <div className="tech-mob-header-title">📜 Job History ({history.length})</div>
         <div style={{width:60}}/>
       </div>
-      <div className="tech-mob-scroll">
+      <div className="tech-mob-scroll" style={{paddingBottom:80}}>
         {history.length===0
-          ? <Empty icon="📭" text="Koi history nahi"/>
+          ? <Empty icon="📭" text="Koi history nahi abhi tak"/>
           : history.map(job=>(
-            <div key={job.id} className="tech-history-card">
+            <div key={job.id}
+              className={`tech-history-card${job.status!=="DONE"?" cancelled-card":""}`}>
               <div className="tech-history-top">
                 <div className="tech-history-name">{job.customer?.name||job.customerName||"Unknown"}</div>
                 <div className={`tech-history-status ${job.status==="DONE"?"done":"cancelled"}`}>
-                  {job.status==="DONE"?"✅ Done":"❌ Cancelled"}
+                  {job.status==="DONE"?"✅ Done":"❌ Cancel"}
                 </div>
               </div>
-              <div className="tech-history-problem">{job.problemDescription}</div>
-              {(job.machineType||job.machineBrand)&&<div className="tech-history-machine">🖥️ {job.machineType} {job.machineBrand}</div>}
-              <div className="tech-history-date">📅 {job.completedAt?new Date(job.completedAt).toLocaleDateString("en-IN"):job.scheduledDate||"—"}</div>
+              {job.problemDescription&&
+                <div className="tech-history-problem">{job.problemDescription}</div>}
+              {(job.machineType||job.machineBrand)&&
+                <div className="tech-history-machine">
+                  🖥️ <span>{job.machineType||""} {job.machineBrand||""}</span>
+                </div>}
+              <div className="tech-history-date">
+                📅 <span>{job.completedAt
+                  ? new Date(job.completedAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})
+                  : job.scheduledDate||"—"}</span>
+              </div>
             </div>
           ))
         }

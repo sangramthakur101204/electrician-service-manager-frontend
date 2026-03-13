@@ -1,6 +1,7 @@
 // src/components/owner/Settings.jsx
 import { useState, useEffect, useRef } from "react";
 import { authHeader, apiFetch } from "../../services/api";
+import { clearSettingsCache } from "../../hooks/useSettings.js";
 import { useToast } from "../Toast.jsx";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -76,6 +77,7 @@ export default function Settings({ onLogout }) {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Save failed");
+      clearSettingsCache();  // Force all components to re-fetch fresh settings
       toast("✅ Settings save ho gayi!", "success");
     } catch(e) { toast("Error: " + e.message, "error"); }
     finally { setSaving(false); }

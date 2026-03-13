@@ -908,15 +908,44 @@ tbody tr:last-child td { border-bottom: none; }
 .tech-mob-nav-btn span:first-child { font-size:20px; }
 .tech-mob-nav-btn.active { color:var(--accent-blue); }
 
-.tech-history-card { margin:6px 12px; padding:14px; background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); }
-.tech-history-top     { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
-.tech-history-name    { font-size:15px; font-weight:700; }
-.tech-history-status  { font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; }
-.tech-history-status.done      { background:rgba(16,185,129,0.1); color:#059669; }
-.tech-history-status.cancelled { background:var(--accent-red-dim); color:var(--accent-red); }
-.tech-history-problem { font-size:13px; margin-bottom:4px; }
-.tech-history-machine { font-size:12px; color:var(--text-secondary); margin-bottom:4px; }
-.tech-history-date    { font-size:11px; color:var(--text-muted); }
+.tech-history-card {
+  margin:8px 12px;
+  padding:14px 14px 12px;
+  background:#fff;
+  border:1px solid #e9eef5;
+  border-left:4px solid #10b981;
+  border-radius:14px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);
+}
+.tech-history-card.cancelled-card { border-left-color:#ef4444; }
+.tech-history-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:8px;
+  margin-bottom:6px;
+}
+.tech-history-name {
+  font-size:15px;
+  font-weight:800;
+  color:#1e293b;
+  flex:1;
+  min-width:0;
+  word-break:break-word;
+}
+.tech-history-status {
+  font-size:11px;
+  font-weight:700;
+  padding:3px 10px;
+  border-radius:20px;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.tech-history-status.done      { background:rgba(16,185,129,0.12); color:#059669; }
+.tech-history-status.cancelled { background:rgba(239,68,68,0.1); color:#ef4444; }
+.tech-history-problem { font-size:13px; color:#374151; margin-bottom:5px; line-height:1.4; word-break:break-word; }
+.tech-history-machine { font-size:12px; color:#6b7280; margin-bottom:4px; display:flex; align-items:center; gap:4px; }
+.tech-history-date    { font-size:11px; color:#9ca3af; display:flex; align-items:center; gap:4px; }
 
 /* ── Technician Invoice Form ── */
 .tech-inv-form { margin:8px 12px; padding:16px; background:#fff; border:1.5px solid var(--accent-blue); border-radius:var(--radius-lg); box-shadow:var(--shadow); }
