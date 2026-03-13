@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { authHeader, downloadInvoicePdf, sendLocation , apiFetch } from "../../services/api";
 import { useToast } from "../Toast.jsx";
-import { useSettings } from "../../hooks/useSettings.js";
 import { generateWarrantyCard } from "../WarrantyCard";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -51,11 +50,6 @@ const fmt = n => "₹" + Number(n||0).toLocaleString("en-IN");
 
 export default function TechApp({ user, onLogout }) {
   const toast = useToast();
-  const { settings, buildFooter: techBuildFooter } = useSettings();
-  const compName = () => settings?.companyName || "Matoshree Enterprises";
-
-  // Build WA footer from settings via hook
-  function buildFooter() { return techBuildFooter(); }
   const [screen,   setScreen]   = useState("home");
   const [jobs,     setJobs]     = useState([]);
   const [history,  setHistory]  = useState([]);
@@ -82,8 +76,9 @@ export default function TechApp({ user, onLogout }) {
   const [savingInv, setSavingInv] = useState(false);
   const [invoice,   setInvoice]   = useState(null);
 
+  const [companySettings, setCompanySettings] = useState(null);
+
   const [gpsStatus, setGpsStatus] = useState("starting"); // "starting" | "ok" | "error"
-  const stopGpsRef = useRef(null);  // Direct GPS stop — called immediately on inactive
   const [isActive,  setIsActive]  = useState(() => {
     // Persist active state in localStorage
     return localStorage.getItem(`tech_active_${user?.id}`) === "true";
@@ -118,22 +113,20 @@ export default function TechApp({ user, onLogout }) {
       try {
         await Promise.all([
           apiFetch(`${API}/tech-sessions/start`, { method:"POST", headers:authHeader() }),
-          apiFetch(`${API}/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() }),
+          apiFetch(`${API}/users/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() }),
         ]);
       } catch(e) {}
     } else {
       localStorage.removeItem(`tech_active_start_${user?.id}`);
       setActiveStart(null);
       setActiveMins(0);
-      // Immediately stop GPS via ref (don't wait for useEffect cleanup)
-      if (stopGpsRef.current) stopGpsRef.current();
-      toast("⏸️ Inactive ho gaye — GPS band hua", "info");
+      toast("⏸️ Inactive ho gaye", "info");
       // Backend: end session + clear location + toggle inactive
       try {
         await Promise.all([
           apiFetch(`${API}/tech-sessions/end`, { method:"POST", headers:authHeader() }),
           fetch(`${API}/location`, { method:"DELETE", headers:authHeader() }),
-          apiFetch(`${API}/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() }),
+          apiFetch(`${API}/users/technicians/${user?.id}/toggle`, { method:"PUT", headers:authHeader() }),
         ]);
       } catch(e) {}
     }
@@ -237,8 +230,6 @@ export default function TechApp({ user, onLogout }) {
       if (fallbackId !== null) { clearInterval(fallbackId); fallbackId = null; }
       releaseWakeLock();
     }
-    // Register stop function so toggleActive can call it directly
-    stopGpsRef.current = () => { stopNativeGPS(); stopWebGPS(); };
 
     // Visibility change — re-acquire wake lock on tab focus (web only)
     const onVisibility = () => {
@@ -276,17 +267,27 @@ export default function TechApp({ user, onLogout }) {
     };
   }, [isActive]);
 
-  useEffect(() => { loadJobs(); }, []);
+  useEffect(() => {
+    loadJobs();
+    // Fetch company settings for footer in WhatsApp messages
+    apiFetch(`${API}/settings`, { headers: authHeader() })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setCompanySettings(d); })
+      .catch(() => {});
+  }, []);
 
   async function loadJobs() {
     setLoading(true);
     try {
       const r = await apiFetch(`${API}/jobs/my-jobs`, { headers:authHeader() });
-      if (r.status === 401) { return; } // api.js handles auto-logout
+      if (r.status === 401) { setLoading(false); return; } // api.js handles auto-logout
       const d = await r.json();
       setJobs(Array.isArray(d) ? d : []);
     } catch(e) {
-      if (e.message !== "Network error") toast("Jobs load nahi hue — retry karo", "error");
+      if (e.message !== "Network error" && e.message !== "Unauthorized") {
+        toast("Jobs load nahi hue — retry karo", "error");
+      }
+      setJobs([]); // ensure jobs is never undefined — prevents white screen
     }
     finally { setLoading(false); }
   }
@@ -386,15 +387,25 @@ export default function TechApp({ user, onLogout }) {
     loadJobs();
   }
 
-  // Build WhatsApp URL for final screen
   function buildInvoiceWA() {
     const cust = doneData?.customer || selected?.customer;
     const mob  = cust?.mobile || selected?.customerMobile;
     if (!mob || !invoice) return null;
+    const co = companySettings?.companyName || "Matoshree Enterprises";
     const itemLines = invoice.items?.map(i=>`  • ${i.serviceName}: ₹${Number(i.totalPrice||0).toLocaleString("en-IN")}`).join("\n")||"";
     const paid  = payment==="Pending" ? "⏳ Payment Pending" : `✅ ${payment} se Payment Received`;
     const hasW  = sForm.warrantyPeriod !== "No Warranty";
     const divider = "━━━━━━━━━━━━━━━━━━━━━";
+
+    // Build footer from company settings
+    let footer = "";
+    if (companySettings) {
+      if (companySettings.companyPhone)  footer += `\n📞 ${companySettings.companyPhone}`;
+      if (companySettings.companyPhone2) footer += `\n📞 ${companySettings.companyPhone2}`;
+      if (companySettings.companyEmail)  footer += `\n✉️ ${companySettings.companyEmail}`;
+      if (companySettings.companyAddress) footer += `\n📍 ${companySettings.companyAddress}`;
+    }
+
     const msg =
       `🧾 *INVOICE — ${invoice.invoiceNumber}*\n`+
       `${divider}\n\n`+
@@ -412,7 +423,8 @@ export default function TechApp({ user, onLogout }) {
       (hasW ? `🛡️ *Warranty: ${sForm.warrantyPeriod}*\n` : "")+
       `✅ Kaam kiya: ${sForm.serviceDetails}\n\n`+
       `Dhanyawad aapka! Koi bhi problem pe hume call karein. 🙏\n`+
-      `— *${user?.name}*, ${compName()}${buildFooter()}`;
+      `— *${user?.name}*, ${co}`+
+      footer;
     return `https://wa.me/91${mob}?text=${encodeURIComponent(msg)}`;
   }
 
@@ -420,10 +432,21 @@ export default function TechApp({ user, onLogout }) {
     const cust = doneData?.customer || selected?.customer;
     const mob  = cust?.mobile || selected?.customerMobile;
     if (!mob) return null;
+    const co = companySettings?.companyName || "Matoshree Enterprises";
     const divider = "━━━━━━━━━━━━━━━━━━━━━";
+
+    // Build footer from company settings
+    let footer = "";
+    if (companySettings) {
+      if (companySettings.companyPhone)  footer += `\n📞 ${companySettings.companyPhone}`;
+      if (companySettings.companyPhone2) footer += `\n📞 ${companySettings.companyPhone2}`;
+      if (companySettings.companyEmail)  footer += `\n✉️ ${companySettings.companyEmail}`;
+      if (companySettings.companyAddress) footer += `\n📍 ${companySettings.companyAddress}`;
+    }
+
     const msg =
       `🛡️ *WARRANTY CARD*\n`+
-      `*Matoshree Enterprises*\n`+
+      `*${co}*\n`+
       `${divider}\n\n`+
       `👤 Customer: *${cust?.name||""}*\n`+
       `📞 Mobile: ${mob}\n\n`+
@@ -436,7 +459,8 @@ export default function TechApp({ user, onLogout }) {
       `${divider}\n\n`+
       `⚠️ Warranty sirf normal use ke liye valid hai.\n`+
       `Warranty claim ke liye humara number save karein.\n\n`+
-      `— *${compName()}*${buildFooter()}`;
+      `— *${co}*`+
+      footer;
     return `https://wa.me/91${mob}?text=${encodeURIComponent(msg)}`;
   }
 
@@ -477,40 +501,35 @@ export default function TechApp({ user, onLogout }) {
         }}>Logout</button>
       </div>
 
-      {/* ── ACTIVE / INACTIVE — Full width, GPS auto with it ── */}
-      <button onClick={toggleActive} style={{
-        display:"block", margin:"12px 12px 0", width:"calc(100% - 24px)",
-        padding:"16px 20px", borderRadius:16, border:"none", boxSizing:"border-box",
-        cursor:"pointer", display:"flex", alignItems:"center",
-        justifyContent:"space-between",
-        background: isActive
-          ? "linear-gradient(135deg,#10b981,#059669)"
-          : "linear-gradient(135deg,#ef4444,#dc2626)",
-        color:"#fff",
-        boxShadow: isActive
-          ? "0 6px 20px rgba(16,185,129,0.4)"
-          : "0 6px 20px rgba(239,68,68,0.35)",
-      }}>
-        <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-          <span style={{ fontSize:32 }}>{isActive ? "🟢" : "🔴"}</span>
-          <div style={{ textAlign:"left" }}>
-            <div style={{ fontSize:17, fontWeight:900, letterSpacing:"-0.3px" }}>
-              {isActive ? "Active — Kaam Pe Hoon" : "Inactive — Kaam Pe Nahi"}
-            </div>
-            <div style={{ fontSize:12, fontWeight:500, opacity:0.9, marginTop:2 }}>
-              {isActive
-                ? `⏱️ ${fmtActiveMins(activeMins)} · 📡 GPS Live`
-                : "Tap karke Active ho jao • GPS bhi ON ho jaayega"}
-            </div>
+      {/* ── ACTIVE / INACTIVE TOGGLE ── */}
+      <div style={{ margin:"10px 12px 0", padding:"12px 16px", borderRadius:14,
+        background: isActive ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.06)",
+        border: `1.5px solid ${isActive ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.2)"}`,
+        display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+        <div>
+          <div style={{ fontWeight:800, fontSize:14, color: isActive ? "#065f46" : "#991b1b" }}>
+            {isActive ? "🟢 Active — Kaam Pe Hoon" : "🔴 Inactive — Kaam Pe Nahi"}
           </div>
+          {isActive && activeStart && (
+            <div style={{ fontSize:11, color:"#6b7280", marginTop:3 }}>
+              ⏱️ Active time: {fmtActiveMins(activeMins)} · GPS on
+            </div>
+          )}
+          {!isActive && (
+            <div style={{ fontSize:11, color:"#9ca3af", marginTop:3 }}>
+              Active karo tab GPS tracking shuru hogi
+            </div>
+          )}
         </div>
-        <div style={{
-          background:"rgba(255,255,255,0.2)", borderRadius:10,
-          padding:"6px 14px", fontSize:12, fontWeight:800, flexShrink:0
+        <button onClick={toggleActive} style={{
+          padding:"9px 18px", borderRadius:10, border:"none", fontWeight:800, fontSize:13,
+          cursor:"pointer", flexShrink:0,
+          background: isActive ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.15)",
+          color: isActive ? "#ef4444" : "#059669"
         }}>
-          {isActive ? "⏸ Stop" : "▶ Start"}
-        </div>
-      </button>
+          {isActive ? "⏸️ Inactive" : "▶️ Active"}
+        </button>
+      </div>
 
       <div className="tech-mob-stats">
         <Stat num={todayJobs.length}     label="Aaj Ke Jobs" />
@@ -628,7 +647,7 @@ export default function TechApp({ user, onLogout }) {
               )}
 
               {!done && mob && (
-                <a href={`https://wa.me/91${mob}?text=${encodeURIComponent(`Namaste ${selected.customerName||selected.customer?.name||""} ji! 🙏\n\nMain ${user?.name} hoon, ${compName()} se.\nAapka ${selected.machineType||"machine"} dekhne aa raha hoon. 🔧\n\nThodi der mein pahunch jaunga!${buildFooter()}`)}`}
+                <a href={`https://wa.me/91${mob}?text=${encodeURIComponent(`Namaste! Main ${user?.name} hoon, Matoshree Enterprises se. Aapka ${selected.machineType||"machine"} dekhne aa raha hoon.`)}`}
                   target="_blank" rel="noreferrer" className="tech-detail-wa-btn">
                   💬 Customer ko WhatsApp Karo
                 </a>
@@ -954,32 +973,23 @@ export default function TechApp({ user, onLogout }) {
     <div className="tech-mobile">
       <div className="tech-mob-header">
         <button className="tech-mob-back" onClick={goHome}>← Back</button>
-        <div className="tech-mob-header-title">📜 Job History ({history.length})</div>
+        <div className="tech-mob-header-title">Job History</div>
         <div style={{width:60}}/>
       </div>
-      <div className="tech-mob-scroll" style={{paddingBottom:80}}>
+      <div className="tech-mob-scroll">
         {history.length===0
-          ? <Empty icon="📭" text="Koi history nahi abhi tak"/>
+          ? <Empty icon="📭" text="Koi history nahi"/>
           : history.map(job=>(
-            <div key={job.id}
-              className={`tech-history-card${job.status!=="DONE"?" cancelled-card":""}`}>
+            <div key={job.id} className="tech-history-card">
               <div className="tech-history-top">
                 <div className="tech-history-name">{job.customer?.name||job.customerName||"Unknown"}</div>
                 <div className={`tech-history-status ${job.status==="DONE"?"done":"cancelled"}`}>
-                  {job.status==="DONE"?"✅ Done":"❌ Cancel"}
+                  {job.status==="DONE"?"✅ Done":"❌ Cancelled"}
                 </div>
               </div>
-              {job.problemDescription&&
-                <div className="tech-history-problem">{job.problemDescription}</div>}
-              {(job.machineType||job.machineBrand)&&
-                <div className="tech-history-machine">
-                  🖥️ <span>{job.machineType||""} {job.machineBrand||""}</span>
-                </div>}
-              <div className="tech-history-date">
-                📅 <span>{job.completedAt
-                  ? new Date(job.completedAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})
-                  : job.scheduledDate||"—"}</span>
-              </div>
+              <div className="tech-history-problem">{job.problemDescription}</div>
+              {(job.machineType||job.machineBrand)&&<div className="tech-history-machine">🖥️ {job.machineType} {job.machineBrand}</div>}
+              <div className="tech-history-date">📅 {job.completedAt?new Date(job.completedAt).toLocaleDateString("en-IN"):job.scheduledDate||"—"}</div>
             </div>
           ))
         }
