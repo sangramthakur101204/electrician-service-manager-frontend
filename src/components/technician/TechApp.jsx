@@ -130,7 +130,7 @@ export default function TechApp({ user, onLogout }) {
       localStorage.setItem(`tech_active_start_${user?.id}`, now);
       setActiveStart(new Date(now));
       setActiveMins(0);
-      toast("✅ Active ho gaye! GPS tracking shuru", "success");
+      toast("🟢 Online ho gaye! GPS tracking shuru", "success");
       // Backend: start session + set active=true explicitly
       try {
         await Promise.all([
@@ -142,7 +142,7 @@ export default function TechApp({ user, onLogout }) {
       localStorage.removeItem(`tech_active_start_${user?.id}`);
       setActiveStart(null);
       setActiveMins(0);
-      toast("⏸️ Inactive ho gaye", "info");
+      toast("🔴 Offline ho gaye", "info");
       // Backend: end session + clear location + set inactive=false explicitly
       try {
         await Promise.all([
@@ -555,12 +555,12 @@ export default function TechApp({ user, onLogout }) {
           </div>
           {isActive && activeStart && (
             <div style={{ fontSize:11, color:"#6b7280", marginTop:3 }}>
-              ⏱️ Active time: {fmtActiveMins(activeMins)} · GPS on
+              ⏱️ Online time: {fmtActiveMins(activeMins)} · GPS on
             </div>
           )}
           {!isActive && (
             <div style={{ fontSize:11, color:"#9ca3af", marginTop:3 }}>
-              Active karo tab GPS tracking shuru hogi
+              Online karo tab GPS tracking shuru hogi
             </div>
           )}
         </div>
@@ -570,7 +570,7 @@ export default function TechApp({ user, onLogout }) {
           background: isActive ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.15)",
           color: isActive ? "#ef4444" : "#059669"
         }}>
-          {isActive ? "⏸️ Inactive" : "▶️ Active"}
+          {isActive ? "🔴 Offline" : "🟢 Online"}
         </button>
       </div>
 

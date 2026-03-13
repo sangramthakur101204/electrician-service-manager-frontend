@@ -113,7 +113,7 @@ function ActivityModal({ tech, color, onClose }) {
                         boxShadow: s.isActive?"0 0 0 3px rgba(16,185,129,0.2)":"none" }}/>
                       <div style={{ flex:1 }}>
                         <div style={{ fontSize:13, fontWeight:700, color:"#1e293b" }}>
-                          {fmtTime(s.start)} → {s.end ? fmtTime(s.end) : "Still Active 🟢"}
+                          {fmtTime(s.start)} → {s.end ? fmtTime(s.end) : "Still Online 🟢"}
                         </div>
                         <div style={{ fontSize:11, color:"#64748b", marginTop:1 }}>
                           Duration: <b>{fmtMins(s.durationMins)}</b>
@@ -183,10 +183,43 @@ export default function AddTechnician() {
 
   useEffect(() => { fetchAll(); }, []);
 
-  // Auto-refresh technician list every 15s — keeps Active/Inactive badge live
+  // Real-time SSE — tech online/offline status instantly
   useEffect(() => {
-    const poll = setInterval(() => fetchAll(), 15000);
-    return () => clearInterval(poll);
+    const token = localStorage.getItem("token") || "";
+    const url = `${API}/sse/tech-status`;
+    let es;
+    function connect() {
+      es = new EventSource(url + "?token=" + encodeURIComponent(token));
+
+      // Initial full status list on connect
+      es.addEventListener("status", (e) => {
+        try {
+          const list = JSON.parse(e.data);
+          setTechs(prev => prev.map(t => {
+            const found = list.find(s => s.id === t.id);
+            return found ? { ...t, isActive: found.isOnline } : t;
+          }));
+        } catch {}
+      });
+
+      // Single tech update
+      es.addEventListener("update", (e) => {
+        try {
+          const upd = JSON.parse(e.data);
+          setTechs(prev => prev.map(t =>
+            t.id === upd.id ? { ...t, isActive: upd.isOnline } : t
+          ));
+        } catch {}
+      });
+
+      es.onerror = () => {
+        es.close();
+        // Reconnect after 5s
+        setTimeout(connect, 5000);
+      };
+    }
+    connect();
+    return () => es && es.close();
   }, []);
 
   // Active time — recalculate every 30s so it stays live
@@ -330,7 +363,7 @@ export default function AddTechnician() {
             const todayEarned = techInvs.filter(i=>i.invoiceDate===todayStr).reduce((s,i)=>s+(i.totalAmount||0),0);
             const lastActiveTime = lastStatus && lastStatus !== "ACTIVE"
               ? `Last active: ${fmtTime(lastStatus)}`
-              : lastStatus === "ACTIVE" ? "🟢 Currently Active" : null;
+              : lastStatus === "ACTIVE" ? "🟢 Currently Online" : null;
 
             return (
               <div key={t.id} style={{background:"#fff",border:`1.5px solid ${color}25`,borderTop:`3px solid ${color}`,borderRadius:16,overflow:"hidden",boxShadow:"0 2px 10px rgba(0,0,0,0.06)",opacity:t.isActive?1:0.75}}>
@@ -348,7 +381,7 @@ export default function AddTechnician() {
                     )}
                   </div>
                   <span style={{padding:"4px 12px",borderRadius:20,fontSize:11,fontWeight:700,background:t.isActive?"rgba(16,185,129,0.1)":"rgba(239,68,68,0.08)",color:t.isActive?"#059669":"#ef4444",flexShrink:0}}>
-                    {t.isActive?"🟢 Active":"🔴 Inactive"}
+                    {t.isActive?"🟢 Online":"🔴 Offline"}
                   </span>
                 </div>
 
