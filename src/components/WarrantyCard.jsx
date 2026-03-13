@@ -1,3 +1,4 @@
+import { downloadBlob } from "../utils/openExternal";
 // WarrantyCard.jsx — Professional portrait card matching reference image style
 
 function drawWarrantyCard(ctx, c, W, H) {
@@ -270,10 +271,9 @@ export function generateWarrantyCard(customer) {
   const safeName = (customer.name || "customer").replace(/\s+/g, "_");
   withSig(customer, (c) => {
     const canvas = makeCanvas(c, 680, 1020);
-    const a = document.createElement("a");
-    a.download = `WarrantyCard_${safeName}_${certNo}.png`;
-    a.href = canvas.toDataURL("image/png");
-    a.click();
+    canvas.toBlob((blob) => {
+      downloadBlob(blob, `WarrantyCard_${safeName}_${certNo}.png`);
+    }, "image/png");
   });
 }
 

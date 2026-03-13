@@ -356,18 +356,20 @@ export default function TechApp({ user, onLogout }) {
 
   async function loadJobs() {
     setLoading(true);
+    // Safety timeout — loading kabhi stuck nahi rahega
+    const timeout = setTimeout(() => setLoading(false), 10000);
     try {
       const r = await apiFetch(`${API}/jobs/my-jobs`, { headers:authHeader() });
-      if (r.status === 401) { setLoading(false); return; } // api.js handles auto-logout
+      if (r.status === 401) { clearTimeout(timeout); setLoading(false); return; }
       const d = await r.json();
       setJobs(Array.isArray(d) ? d : []);
     } catch(e) {
       if (e.message !== "Network error" && e.message !== "Unauthorized") {
         toast("Jobs load nahi hue — retry karo", "error");
       }
-      setJobs([]); // ensure jobs is never undefined — prevents white screen
+      setJobs([]);
     }
-    finally { setLoading(false); }
+    finally { clearTimeout(timeout); setLoading(false); }
   }
 
   async function loadHistory() {
