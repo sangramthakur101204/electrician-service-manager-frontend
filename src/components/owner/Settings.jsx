@@ -1,7 +1,6 @@
 // src/components/owner/Settings.jsx
 import { useState, useEffect, useRef } from "react";
 import { authHeader, apiFetch } from "../../services/api";
-import { clearSettingsCache } from "../../hooks/useSettings.js";
 import { useToast } from "../Toast.jsx";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -48,7 +47,7 @@ export default function Settings({ onLogout }) {
     companyEmail:"", gstNumber:"", tagline:"",
     rateCardJson:"", invoiceMsgTemplate:"",
     assignedMsgTemplate:"", warrantyMsgTemplate:"", thankyouMsgTemplate:"",
-    signatureBase64:"", linksJson:"",
+    signatureBase64:"",
   });
   const [rateCard, setRateCard] = useState(DEFAULT_RATE_CARD);
 
@@ -77,7 +76,6 @@ export default function Settings({ onLogout }) {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Save failed");
-      clearSettingsCache();  // Force all components to re-fetch fresh settings
       toast("✅ Settings save ho gayi!", "success");
     } catch(e) { toast("Error: " + e.message, "error"); }
     finally { setSaving(false); }
@@ -118,7 +116,7 @@ export default function Settings({ onLogout }) {
 
       {/* Tab Nav */}
       <div style={{ display:"flex", gap:8, borderBottom:"2px solid #f1f5f9", paddingBottom:0 }}>
-        {[["company","🏢 Company"],["links","🔗 Links"],["ratecard","📋 Rate Card"],["messages","💬 Messages"],["signature","✍️ Signature"]].map(([k,label]) => (
+        {[["company","🏢 Company"],["ratecard","📋 Rate Card"],["messages","💬 Messages"],["signature","✍️ Signature"]].map(([k,label]) => (
           <button key={k} onClick={()=>setTab(k)}
             style={{ padding:"10px 16px", border:"none", cursor:"pointer", fontWeight:700, fontSize:13,
               background:"none", borderBottom: tab===k ? "2px solid #3b82f6" : "2px solid transparent",
@@ -219,48 +217,37 @@ export default function Settings({ onLogout }) {
       {tab === "messages" && (
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <div style={{ padding:14, background:"rgba(245,158,11,0.07)", borderRadius:10, border:"1px solid rgba(245,158,11,0.2)", fontSize:12, color:"#92400e" }}>
-            💡 Ye templates WhatsApp messages mein use honge. Variables: <strong>{"{customerName}"}</strong>, <strong>{"{techName}"}</strong>, <strong>{"{techMobile}"}</strong>, <strong>{"{machineType}"}</strong>, <strong>{"{scheduledDate}"}</strong>, <strong>{"{invoiceNo}"}</strong>, <strong>{"{total}"}</strong>, <strong>{"{warranty}"}</strong>, <strong>{"{companyName}"}</strong>
+            💡 Ye templates WhatsApp messages mein use honge. Variables: <strong>{"{customerName}"}</strong>, <strong>{"{techName}"}</strong>, <strong>{"{techMobile}"}</strong>, <strong>{"{machineType}"}</strong>, <strong>{"{scheduledDate}"}</strong>, <strong>{"{invoiceNo}"}</strong>, <strong>{"{total}"}</strong>, <strong>{"{warranty}"}</strong>, <strong>{"{companyName}"}</strong>, <strong style={{color:"#059669"}}>{"{companyFooter}"}</strong>
+            <div style={{marginTop:8, padding:"8px 10px", background:"rgba(5,150,105,0.08)", borderRadius:8, color:"#065f46", lineHeight:1.7}}>
+              📌 <strong>{"{companyFooter}"}</strong> — Yeh automatically company ka phone, email, address aur links add karta hai message ke end mein. <em>Company tab mein jo save kiya hai woh aayega.</em>
+            </div>
           </div>
 
-          {/* Live Footer Preview — shows what gets auto-appended to ALL messages */}
-          {(() => {
-            const parts = [];
-            if (s.companyPhone)   parts.push(`📞 ${s.companyPhone}`);
-            if (s.companyPhone2)  parts.push(`📞 ${s.companyPhone2}`);
-            if (s.companyEmail)   parts.push(`✉️ ${s.companyEmail}`);
-            if (s.companyAddress) {
-              parts.push(`📍 ${s.companyAddress}`);
-              parts.push(`🗺️ maps.google.com/?q=${encodeURIComponent(s.companyAddress)}`);
-            }
-            try { JSON.parse(s.linksJson||"[]").filter(l=>l.url).forEach(l=>parts.push(`🔗 ${l.label?l.label+": ":""}${l.url}`)); } catch(e){}
-            return (
-              <div style={{ padding:"12px 16px", background:"rgba(16,185,129,0.06)", borderRadius:12, border:"1.5px solid rgba(16,185,129,0.2)" }}>
-                <div style={{ fontSize:11, fontWeight:800, color:"#059669", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:8 }}>
-                  📎 Auto-Footer — Har message ke end mein yeh automatically add hoga
-                </div>
-                {parts.length === 0 ? (
-                  <div style={{ fontSize:12, color:"#94a3b8", fontStyle:"italic" }}>
-                    ⚠️ Footer empty hai — Settings › Company mein phone/address/email bharo, ya Links tab mein links add karo.
-                  </div>
-                ) : (
-                  <pre style={{ margin:0, fontSize:12, color:"#1e293b", fontFamily:"monospace", whiteSpace:"pre-wrap", lineHeight:1.8 }}>
-{`— ${s.companyName||"Company Name"}
-${parts.join("\n")}`}
-                  </pre>
-                )}
+          {/* AUTO-FOOTER PREVIEW */}
+          {(s.companyPhone || s.companyEmail || s.companyAddress) && (
+            <div style={{ padding:14, background:"rgba(16,185,129,0.05)", borderRadius:10, border:"1px solid rgba(16,185,129,0.2)", fontSize:12 }}>
+              <div style={{fontWeight:800, color:"#059669", fontSize:11, textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:8}}>
+                🔗 AUTO-FOOTER — HAR MESSAGE KE END MEIN YEH AUTOMATICALLY ADD HOGA
               </div>
-            );
-          })()}
+              <div style={{fontFamily:"monospace", color:"#1e293b", lineHeight:2, whiteSpace:"pre-wrap"}}>
+                {"— " + (s.companyName || "Company Name")}
+                {s.companyPhone  ? "\n📞 " + s.companyPhone  : ""}
+                {s.companyPhone2 ? "\n📞 " + s.companyPhone2 : ""}
+                {s.companyEmail  ? "\n✉️ " + s.companyEmail  : ""}
+                {s.companyAddress? "\n📍 " + s.companyAddress : ""}
+              </div>
+            </div>
+          )}
 
           {[
-            { key:"assignedMsgTemplate", label:"📅 Job Assigned → Customer ko msg",
-              placeholder:`🙏 Namaste {customerName} ji!\n\nAapka service request confirm ho gaya hai. ✅\n\n👷 Technician: {techName}\n📞 Tech Mobile: {techMobile}\n📅 Schedule: {scheduledDate}\n🔧 Machine: {machineType}\n\nKoi problem ho toh humse contact karein.\n\n— {companyName}` },
-            { key:"invoiceMsgTemplate", label:"🧾 Invoice → Customer ko msg",
-              placeholder:`🙏 Namaste {customerName} ji!\n\nAapki {machineType} ki service complete ho gayi. ✅\n\n🧾 Invoice No: {invoiceNo}\n💰 Total: {total}\n🛡️ Warranty: {warranty}\n\nDhanyawad aapka! 🙏\n\n— {companyName}` },
-            { key:"warrantyMsgTemplate", label:"🛡️ Warranty Card → Customer ko msg",
-              placeholder:`🛡️ WARRANTY CARD\n\nCustomer: {customerName}\nMachine: {machineType}\nWarranty: {warranty}\n\nWarranty ke liye humara number save karein.\n\n— {companyName}` },
-            { key:"thankyouMsgTemplate", label:"🙏 Thank You → Customer ko msg",
-              placeholder:`🙏 Namaste {customerName} ji!\n\nAapka bahut bahut dhanyawad! 😊\nHamari service aapko pasand aayi hogi.\n\nKoi bhi problem aaye toh zaroor batao.\n\n— {companyName}` },
+            { key:"assignedMsgTemplate", label:"📅 Job Assigned → Customer ko msg", icon:"📅",
+              placeholder:`🙏 Namaste {customerName} ji!\n\nAapka service request confirm ho gaya hai. ✅\n\n👷 Technician: {techName}\n📞 Tech Mobile: {techMobile}\n📅 Schedule: {scheduledDate}\n🔧 Machine: {machineType}\n\nKoi problem ho toh humse contact karein.\n\n— {companyName}\n{companyFooter}` },
+            { key:"invoiceMsgTemplate", label:"🧾 Invoice → Customer ko msg", icon:"🧾",
+              placeholder:`🙏 Namaste {customerName} ji!\n\nAapki {machineType} ki service complete ho gayi. ✅\n\n🧾 Invoice No: {invoiceNo}\n💰 Total: {total}\n🛡️ Warranty: {warranty}\n\nDhanyawad aapka! 🙏\n\n— {companyName}\n{companyFooter}` },
+            { key:"warrantyMsgTemplate", label:"🛡️ Warranty Card → Customer ko msg", icon:"🛡️",
+              placeholder:`🛡️ WARRANTY CARD\n\nCustomer: {customerName}\nMachine: {machineType}\nWarranty: {warranty}\n\nWarranty ke liye humara number save karein.\n\n— {companyName}\n{companyFooter}` },
+            { key:"thankyouMsgTemplate", label:"🙏 Thank You → Customer ko msg", icon:"🙏",
+              placeholder:`🙏 Namaste {customerName} ji!\n\nAapka bahut bahut dhanyawad! 😊\nHamari service aapko pasand aayi hogi.\n\nKoi bhi problem aaye toh zaroor batao.\n\n— {companyName}\n{companyFooter}` },
           ].map(({ key, label, placeholder }) => (
             <Section key={key} title={label} icon={label.split(" ")[0]}>
               <textarea
@@ -270,9 +257,8 @@ ${parts.join("\n")}`}
                 rows={6}
                 style={{ ...inp, resize:"vertical", fontFamily:"monospace", fontSize:12, lineHeight:1.6 }}
               />
-              <div style={{ marginTop:6, fontSize:11, color:"#94a3b8", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <span>Khali chhodo toh default message use hoga.</span>
-                {s[key] && <button onClick={()=>set(key,"")} style={{border:"none",background:"none",color:"#ef4444",cursor:"pointer",fontSize:11,fontWeight:600}}>🗑 Reset</button>}
+              <div style={{ marginTop:8, fontSize:11, color:"#94a3b8" }}>
+                Khali chhodo toh default message use hoga. Preview ke liye save karo.
               </div>
             </Section>
           ))}
@@ -280,9 +266,6 @@ ${parts.join("\n")}`}
       )}
 
       {/* ── SIGNATURE TAB ── */}
-      {/* ── LINKS TAB ── */}
-      {tab === "links" && <LinksEditor value={s.linksJson} onChange={v=>set("linksJson",v)} onSave={save} saving={saving} settings={s} />}
-
       {tab === "signature" && <SignaturePad value={s.signatureBase64} onChange={v=>set("signatureBase64",v)} onSave={save} saving={saving} />}
 
       {/* ── LOGOUT BUTTON ── */}
@@ -422,119 +405,5 @@ function SignaturePad({ value, onChange, onSave, saving }) {
         </div>
       </div>
     </Section>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
-// LINKS EDITOR COMPONENT
-// ─────────────────────────────────────────────────────────
-function LinksEditor({ value, onChange, onSave, saving, settings }) {
-  // Parse existing links
-  const parse = (v) => {
-    try { return JSON.parse(v || "[]"); } catch { return []; }
-  };
-  const [links, setLinksState] = useState(() => parse(value));
-
-  // Sync to parent as JSON string whenever links change
-  const update = (newLinks) => {
-    setLinksState(newLinks);
-    onChange(JSON.stringify(newLinks));
-  };
-
-  const addLink  = () => update([...links, { label:"", url:"" }]);
-  const removeLink = (i) => update(links.filter((_,idx)=>idx!==i));
-  const setField = (i, k, v) => update(links.map((l,idx)=>idx===i?{...l,[k]:v}:l));
-
-  // Build WhatsApp footer preview
-  const buildFooter = () => {
-    const parts = [];
-    if (settings.companyPhone)  parts.push(`📞 ${settings.companyPhone}`);
-    if (settings.companyPhone2) parts.push(`📞 ${settings.companyPhone2}`);
-    if (settings.companyEmail)  parts.push(`✉️ ${settings.companyEmail}`);
-    if (settings.companyAddress) parts.push(`📍 ${settings.companyAddress}`);
-    // Google Maps link for address
-    if (settings.companyAddress) {
-      const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(settings.companyAddress)}`;
-      parts.push(`🗺️ ${mapsUrl}`);
-    }
-    links.filter(l=>l.url).forEach(l => parts.push(`🔗 ${l.label ? l.label+": " : ""}${l.url}`));
-    return parts.join("\n");
-  };
-
-  const inp2 = {
-    padding:"8px 12px", borderRadius:8, border:"1.5px solid #e2e8f0",
-    fontSize:13, fontFamily:"inherit", outline:"none", width:"100%", boxSizing:"border-box",
-  };
-
-  return (
-    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-      <Section title="Company Links" icon="🔗">
-        <div style={{ fontSize:13, color:"#64748b", marginBottom:14, lineHeight:1.6 }}>
-          Apni website, Google My Business, Instagram, YouTube — jo bhi links customer ko bhejne hain. Yeh WhatsApp messages ke footer mein automatically add honge.
-        </div>
-
-        {links.length === 0 && (
-          <div style={{ textAlign:"center", padding:"24px 0", color:"#cbd5e1", fontSize:13 }}>
-            Koi link nahi — "+ Link Add Karo" dabao
-          </div>
-        )}
-
-        {links.map((l, i) => (
-          <div key={i} style={{ display:"flex", gap:8, marginBottom:10, alignItems:"center" }}>
-            <input
-              placeholder="Label (e.g. Website, Instagram)"
-              value={l.label}
-              onChange={e=>setField(i,"label",e.target.value)}
-              style={{ ...inp2, width:160, flexShrink:0 }}
-            />
-            <input
-              placeholder="URL (https://...)"
-              value={l.url}
-              onChange={e=>setField(i,"url",e.target.value)}
-              style={{ ...inp2, flex:1 }}
-            />
-            <button onClick={()=>removeLink(i)}
-              style={{ padding:"8px 12px", border:"none", background:"rgba(239,68,68,0.1)",
-                color:"#ef4444", borderRadius:8, cursor:"pointer", fontWeight:700, flexShrink:0 }}>
-              ✕
-            </button>
-          </div>
-        ))}
-
-        <button onClick={addLink}
-          style={{ width:"100%", padding:"9px", border:"1.5px dashed #3b82f6",
-            background:"rgba(59,130,246,0.04)", color:"#3b82f6",
-            borderRadius:9, fontWeight:700, fontSize:13, cursor:"pointer", marginBottom:16 }}>
-          + Link Add Karo
-        </button>
-
-        {/* Footer preview */}
-        <div style={{ background:"#f8fafc", borderRadius:10, padding:"12px 14px",
-          border:"1px solid #e2e8f0" }}>
-          <div style={{ fontSize:11, fontWeight:800, color:"#94a3b8", textTransform:"uppercase",
-            letterSpacing:"0.05em", marginBottom:8 }}>
-            📱 WhatsApp Message Footer Preview
-          </div>
-          <pre style={{ margin:0, fontSize:12, color:"#1e293b", whiteSpace:"pre-wrap",
-            fontFamily:"monospace", lineHeight:1.7 }}>
-{`— ${settings.companyName || "Company Name"}
-${buildFooter() || "(Company details Settings > Company mein bharo)"}`}
-          </pre>
-        </div>
-
-        <div style={{ fontSize:12, color:"#94a3b8", marginTop:8, padding:"8px 12px",
-          background:"rgba(59,130,246,0.04)", borderRadius:8, border:"1px solid rgba(59,130,246,0.1)" }}>
-          💡 Phone, Email, Address → Settings &gt; Company mein update karo. Yeh automatically footer mein aayenge. Google Maps link bhi auto-generate hoga address se.
-        </div>
-
-        <button onClick={onSave} disabled={saving}
-          style={{ marginTop:14, width:"100%", padding:"11px", borderRadius:10,
-            background:"linear-gradient(135deg,#3b82f6,#2563eb)", color:"#fff",
-            border:"none", fontWeight:800, fontSize:14,
-            cursor:saving?"not-allowed":"pointer", opacity:saving?0.7:1 }}>
-          {saving ? "⏳ Save ho raha hai..." : "💾 Links Save Karo"}
-        </button>
-      </Section>
-    </div>
   );
 }
