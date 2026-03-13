@@ -488,17 +488,30 @@ export default function TechApp({ user, onLogout }) {
 
   function getWarrantyCustomerObj() {
     const cust = doneData?.customer || selected?.customer || {};
+    // Calculate warrantyEnd from serviceDate + warrantyPeriod
+    let warrantyEnd = cust.warrantyEnd || null;
+    if (!warrantyEnd && sForm.serviceDate && sForm.warrantyPeriod && sForm.warrantyPeriod !== "No Warranty") {
+      const d = new Date(sForm.serviceDate);
+      if      (sForm.warrantyPeriod === "3 months") d.setMonth(d.getMonth() + 3);
+      else if (sForm.warrantyPeriod === "6 months") d.setMonth(d.getMonth() + 6);
+      else if (sForm.warrantyPeriod === "1 year")   d.setFullYear(d.getFullYear() + 1);
+      else if (sForm.warrantyPeriod === "2 years")  d.setFullYear(d.getFullYear() + 2);
+      else if (sForm.warrantyPeriod === "3 years")  d.setFullYear(d.getFullYear() + 3);
+      warrantyEnd = d.toISOString().split("T")[0];
+    }
     return {
       ...cust,
       name:           cust.name || selected?.customerName || "",
+      mobile:         cust.mobile || selected?.customerMobile || "",
+      address:        cust.address || selected?.customerAddress || "",
       machineType:    cust.machineType  || selected?.machineType  || "",
       machineBrand:   cust.machineBrand || selected?.machineBrand || "",
-      serialNumber:   sForm.serialNumber || "",
+      serialNumber:   sForm.serialNumber || cust.serialNumber || "",
       serviceDate:    sForm.serviceDate,
       warrantyPeriod: sForm.warrantyPeriod,
+      warrantyEnd:    warrantyEnd,
       serviceDetails: sForm.serviceDetails,
       technicianName: user?.name || "",
-      // Company details for footer
       companyName:    companySettings?.companyName    || "Matoshree Enterprises",
       companyPhone:   companySettings?.companyPhone   || "",
       companyPhone2:  companySettings?.companyPhone2  || "",
@@ -892,8 +905,10 @@ export default function TechApp({ user, onLogout }) {
               Order: Invoice WA → (if warranty) Warranty Card WA → (if warranty) Download → PDF → Home
           ══════════════════════════════════════════════════ */}
           {step==="done" && invoice && (()=>{
-            const invWA = buildInvoiceWA();
-            const warWA = hasWarranty ? buildWarrantyWA() : null;
+            const custObj = doneData?.customer || selected?.customer || {};
+            const mob     = custObj?.mobile || selected?.customerMobile || doneData?.customerMobile || "";
+            const custName = custObj?.name || selected?.customerName || "";
+            const co      = companySettings?.companyName || "Matoshree Enterprises";
             return (
               <div style={{padding:"16px"}}>
 
@@ -918,11 +933,9 @@ export default function TechApp({ user, onLogout }) {
                         toast("⏳ PDF ban raha hai...", "info", 2000);
                         const blob = await getInvoicePdfBlob(invoice.id);
                         const file = new File([blob], `Invoice_${invoice.invoiceNumber}.pdf`, { type:"application/pdf" });
-                        const mob  = (doneData?.customer || selected?.customer)?.mobile || selected?.customerMobile;
-                        const co   = companySettings?.companyName || "Matoshree Enterprises";
                         const thankyouMsg =
                           `🧾 *Invoice: ${invoice.invoiceNumber}*\n\n`+
-                          `Hello *${(doneData?.customer||selected?.customer)?.name || ""}*! 👋\n\n`+
+                          `Hello *${custName}*! 👋\n\n`+
                           `Aapki service complete ho gayi. Invoice PDF attached hai.\n\n`+
                           `💰 *Total: ₹${Number(invoice.totalAmount||0).toLocaleString("en-IN")}*\n`+
                           `✅ Kaam: ${sForm.serviceDetails}\n`+
@@ -931,11 +944,8 @@ export default function TechApp({ user, onLogout }) {
                         if (navigator.share && navigator.canShare({ files:[file] })) {
                           await navigator.share({ files:[file], text: thankyouMsg, title:`Invoice ${invoice.invoiceNumber}` });
                         } else {
-                          // Fallback: download PDF + open WhatsApp with message
-                          downloadInvoicePdf(invoice.id, (doneData?.customer||selected?.customer)?.name, invoice.invoiceNumber);
-                          if (mob) {
-                            setTimeout(() => window.open(`https://wa.me/91${mob}?text=${encodeURIComponent(thankyouMsg)}`, "_blank"), 1500);
-                          }
+                          downloadInvoicePdf(invoice.id, custName, invoice.invoiceNumber);
+                          if (mob) setTimeout(() => window.open(`https://wa.me/91${mob}?text=${encodeURIComponent(thankyouMsg)}`, "_blank"), 1500);
                         }
                       } catch(e) { toast("Share mein error: " + e.message, "error"); }
                     }}
@@ -949,23 +959,20 @@ export default function TechApp({ user, onLogout }) {
                       onClick={async () => {
                         try {
                           toast("⏳ Warranty card ban raha hai...", "info", 2000);
-                          const blob = await generateWarrantyCardBlob(getWarrantyCustomerObj());
+                          const warrantyObj = getWarrantyCustomerObj();
+                          const blob = await generateWarrantyCardBlob(warrantyObj);
                           const file = new File([blob], `WarrantyCard_${sForm.warrantyPeriod}.png`, { type:"image/png" });
-                          const mob  = (doneData?.customer || selected?.customer)?.mobile || selected?.customerMobile;
-                          const co   = companySettings?.companyName || "Matoshree Enterprises";
                           const warMsg =
                             `🛡️ *Warranty Card*\n\n`+
-                            `Hello *${(doneData?.customer||selected?.customer)?.name || ""}*!\n\n`+
+                            `Hello *${custName}*!\n\n`+
                             `Aapki warranty card attached hai.\n`+
                             `✅ Warranty: *${sForm.warrantyPeriod}*\n\n`+
                             `— *${co}*`;
                           if (navigator.share && navigator.canShare({ files:[file] })) {
                             await navigator.share({ files:[file], text: warMsg, title:"Warranty Card" });
                           } else {
-                            generateWarrantyCard(getWarrantyCustomerObj());
-                            if (mob) {
-                              setTimeout(() => window.open(`https://wa.me/91${mob}?text=${encodeURIComponent(warMsg)}`, "_blank"), 1500);
-                            }
+                            generateWarrantyCard(warrantyObj);
+                            if (mob) setTimeout(() => window.open(`https://wa.me/91${mob}?text=${encodeURIComponent(warMsg)}`, "_blank"), 1500);
                           }
                         } catch(e) { toast("Share mein error: " + e.message, "error"); }
                       }}
@@ -974,9 +981,9 @@ export default function TechApp({ user, onLogout }) {
                       sub={`${sForm.warrantyPeriod} — PNG image with company details`}/>
                   )}
 
-                  {/* 3. Sirf download — fallback */}
+                  {/* 3. Sirf save — fallback */}
                   <div style={{display:"flex",gap:8}}>
-                    <button onClick={()=>downloadInvoicePdf(invoice.id,(doneData?.customer||selected?.customer)?.name,invoice.invoiceNumber)}
+                    <button onClick={()=>downloadInvoicePdf(invoice.id, custName, invoice.invoiceNumber)}
                       style={{flex:1,padding:"10px 8px",background:"rgba(99,102,241,0.08)",border:"1.5px solid rgba(99,102,241,0.25)",borderRadius:10,color:"#6366f1",fontWeight:700,fontSize:12,cursor:"pointer"}}>
                       📄 Invoice PDF Save
                     </button>
