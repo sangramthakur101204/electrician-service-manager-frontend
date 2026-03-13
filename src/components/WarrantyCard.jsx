@@ -1,210 +1,286 @@
-// src/components/WarrantyCard.jsx  — Professional portrait warranty card
+// WarrantyCard.jsx — Professional portrait card matching reference image style
 
-function drawCard(ctx, c, W, H) {
-  const NAVY="#1a2a4a", GOLD="#c9941a", GOLD2="#e8b84b", WHITE="#fff",
-        CREAM="#faf8f3", LGRAY="#f0f2f7", TEXT="#1e2d3d", MUTED="#6b7c93",
-        LINE="#d8dde8", DARK="#0f1923";
+function drawWarrantyCard(ctx, c, W, H) {
+  // ── COLORS ──
+  const NAVY   = "#1B2A4A";
+  const GOLD   = "#C9961A";
+  const GOLD2  = "#F0C040";
+  const WHITE  = "#FFFFFF";
+  const CREAM  = "#FAF8F3";
+  const LGRAY  = "#EEF1F7";
+  const TEXT   = "#1C2B3A";
+  const MUTED  = "#6B7C93";
+  const BORDER = "#D5DAE8";
 
-  const co      = c.companyName    || "Matoshree Enterprises";
-  const phone   = c.companyPhone   || "";
-  const phone2  = c.companyPhone2  || "";
-  const email   = c.companyEmail   || "";
-  const addr    = c.companyAddress || "";
-  const tech    = c.technicianName || co;
-  const certNo  = "WC-"+String(c.id||"0001").padStart(4,"0")+"-"+new Date().getFullYear();
+  const co     = c.companyName    || "Matoshree Enterprises";
+  const phone  = c.companyPhone   || "";
+  const phone2 = c.companyPhone2  || "";
+  const email  = c.companyEmail   || "";
+  const addr   = c.companyAddress || "";
+  const tech   = c.technicianName || co;
 
-  // ── Background ──
-  ctx.fillStyle = CREAM; ctx.fillRect(0,0,W,H);
+  const certNo = "WC-" + String(c.id || "0001").padStart(4, "0") + "-" + new Date().getFullYear();
 
-  // ── Top navy header ──
-  ctx.fillStyle = NAVY; ctx.fillRect(0,0,W,170);
+  // ── BACKGROUND ──
+  ctx.fillStyle = CREAM;
+  ctx.fillRect(0, 0, W, H);
 
-  // Subtle diagonal pattern in header
+  // ══════════════════════════════
+  //  HEADER — navy with diagonal stripes
+  // ══════════════════════════════
+  ctx.fillStyle = NAVY;
+  ctx.fillRect(0, 0, W, 175);
+
+  // Subtle diagonal stripes
   ctx.save();
-  for(let i=-20;i<W+20;i+=22){
-    ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i+170,170);
-    ctx.strokeStyle="rgba(255,255,255,0.04)"; ctx.lineWidth=8; ctx.stroke();
+  ctx.globalAlpha = 0.05;
+  for (let i = -200; i < W + 200; i += 24) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0); ctx.lineTo(i + 200, 200);
+    ctx.strokeStyle = WHITE; ctx.lineWidth = 10; ctx.stroke();
   }
+  ctx.globalAlpha = 1;
   ctx.restore();
 
-  // Gold bottom border on header
-  const grad = ctx.createLinearGradient(0,0,W,0);
-  grad.addColorStop(0,"#c9941a"); grad.addColorStop(0.5,"#f5d080"); grad.addColorStop(1,"#c9941a");
-  ctx.fillStyle=grad; ctx.fillRect(0,165,W,5);
+  // Gold shimmer bottom border on header
+  const hBorder = ctx.createLinearGradient(0, 0, W, 0);
+  hBorder.addColorStop(0,   "#8B6010");
+  hBorder.addColorStop(0.3, "#F0C040");
+  hBorder.addColorStop(0.7, "#F0C040");
+  hBorder.addColorStop(1,   "#8B6010");
+  ctx.fillStyle = hBorder;
+  ctx.fillRect(0, 170, W, 5);
 
-  // Company logo circle
-  const cx2=64, cy2=85, r=42;
+  // Logo circle — gold gradient
+  const lx = 64, ly = 88;
+  const lgr = ctx.createRadialGradient(lx - 12, ly - 12, 4, lx, ly, 44);
+  lgr.addColorStop(0, "#F8DD80");
+  lgr.addColorStop(1, "#C9961A");
   ctx.save();
-  ctx.beginPath(); ctx.arc(cx2,cy2,r,0,Math.PI*2);
-  const lg=ctx.createRadialGradient(cx2-10,cy2-10,5,cx2,cy2,r);
-  lg.addColorStop(0,"#f5d080"); lg.addColorStop(1,"#c9941a");
-  ctx.fillStyle=lg; ctx.fill();
-  ctx.strokeStyle="rgba(255,255,255,0.5)"; ctx.lineWidth=2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(lx, ly, 44, 0, Math.PI * 2);
+  ctx.fillStyle = lgr; ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = 2.5; ctx.stroke();
   ctx.restore();
-  ctx.fillStyle=NAVY; ctx.font="bold 36px serif"; ctx.textAlign="center";
-  ctx.fillText("⚡",cx2,cy2+13); ctx.textAlign="left";
 
-  // Company name & subtitle
-  ctx.fillStyle=WHITE; ctx.font="bold 26px 'Times New Roman', Georgia, serif";
-  ctx.fillText(co.toUpperCase(), 122, 78);
-  ctx.fillStyle=GOLD2; ctx.font="italic 14px Georgia, serif";
-  ctx.fillText("SERVICE WARRANTY", 124, 102);
-  ctx.fillStyle="rgba(255,255,255,0.25)"; ctx.fillRect(124,112,180,1);
+  // Lightning bolt
+  ctx.fillStyle = NAVY;
+  ctx.font = "bold 38px serif";
+  ctx.textAlign = "center";
+  ctx.fillText("⚡", lx, ly + 14);
+  ctx.textAlign = "left";
 
-  // ── Section title band ──
-  ctx.fillStyle=LGRAY; ctx.fillRect(0,170,W,48);
-  ctx.fillStyle=NAVY; ctx.font="bold 13px 'Times New Roman', Georgia, serif";
-  ctx.textAlign="center"; ctx.fillText("WARRANTY CERTIFICATE", W/2, 200); ctx.textAlign="left";
-  ctx.fillStyle=GOLD; ctx.fillRect(W/2-70,208,140,2);
+  // Company name
+  ctx.fillStyle = WHITE;
+  ctx.font = "bold 26px 'Times New Roman', Georgia, serif";
+  ctx.fillText(co.toUpperCase(), 124, 82);
 
-  // ── White card body ──
-  ctx.fillStyle=WHITE;
-  ctx.shadowColor="rgba(0,0,0,0.09)"; ctx.shadowBlur=16; ctx.shadowOffsetY=2;
-  roundedRect(ctx, 28, 232, W-56, H-332, 4, WHITE);
-  ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+  // Tagline
+  ctx.fillStyle = GOLD2;
+  ctx.font = "italic 14px Georgia, serif";
+  ctx.fillText("SERVICE WARRANTY", 126, 108);
 
-  // Gold accent left bar
-  const barGrad = ctx.createLinearGradient(0,232,0,232+(H-332));
-  barGrad.addColorStop(0,"#f5d080"); barGrad.addColorStop(1,"#c9941a");
-  ctx.fillStyle=barGrad; ctx.fillRect(28,232,5,H-332);
+  // Thin gold line under tagline
+  ctx.fillStyle = "rgba(240,192,64,0.4)";
+  ctx.fillRect(126, 118, 200, 1);
 
-  // ── Content ──
-  const lx=54, rx=W-54;
-  let y=270;
+  // ══════════════════════════════
+  //  CERTIFICATE TITLE BAND
+  // ══════════════════════════════
+  ctx.fillStyle = LGRAY;
+  ctx.fillRect(0, 175, W, 50);
 
-  function secLabel(text){
-    ctx.fillStyle=GOLD; ctx.font="bold 10px Georgia, serif";
-    ctx.letterSpacing="2px";
-    ctx.fillText(text.toUpperCase(), lx, y); y+=14;
-    ctx.fillStyle=LINE; ctx.fillRect(lx,y,rx-lx,1); y+=16;
-    ctx.letterSpacing="0px";
+  ctx.fillStyle = NAVY;
+  ctx.font = "bold 13px Georgia, serif";
+  ctx.textAlign = "center";
+  ctx.fillText("WARRANTY CERTIFICATE", W / 2, 207);
+  ctx.textAlign = "left";
+
+  // Gold underline
+  const ulGr = ctx.createLinearGradient(W/2 - 80, 0, W/2 + 80, 0);
+  ulGr.addColorStop(0, "transparent");
+  ulGr.addColorStop(0.3, GOLD);
+  ulGr.addColorStop(0.7, GOLD);
+  ulGr.addColorStop(1, "transparent");
+  ctx.fillStyle = ulGr;
+  ctx.fillRect(W/2 - 80, 215, 160, 2);
+
+  // ══════════════════════════════
+  //  WHITE CARD BODY
+  // ══════════════════════════════
+  const cardTop = 238, cardBot = H - 165;
+  const cardH = cardBot - cardTop;
+
+  // Shadow
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.10)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 3;
+  ctx.fillStyle = WHITE;
+  ctx.fillRect(28, cardTop, W - 56, cardH);
+  ctx.restore();
+
+  // Gold left accent bar
+  const barGr = ctx.createLinearGradient(0, cardTop, 0, cardTop + cardH);
+  barGr.addColorStop(0, GOLD2);
+  barGr.addColorStop(1, GOLD);
+  ctx.fillStyle = barGr;
+  ctx.fillRect(28, cardTop, 5, cardH);
+
+  // ── CONTENT ──
+  const PL = 58, PR = W - 52;
+  let Y = cardTop + 32;
+  const COL2 = PL + 140; // label/value split
+
+  function sectionHead(text) {
+    ctx.fillStyle = GOLD;
+    ctx.font = "bold 10px Georgia, serif";
+    // letter-spacing simulation
+    let sx = PL;
+    for (const ch of text) { ctx.fillText(ch, sx, Y); sx += ctx.measureText(ch).width + 1.5; }
+    Y += 14;
+    ctx.fillStyle = BORDER; ctx.fillRect(PL, Y, PR - PL, 1); Y += 16;
   }
-  function dataRow(label, value, highlight=false){
-    ctx.fillStyle=MUTED; ctx.font="12px Georgia, serif";
-    ctx.fillText(label, lx, y);
-    ctx.fillStyle=highlight?NAVY:TEXT;
-    ctx.font=highlight?"bold 19px 'Times New Roman',Georgia,serif":"15px Georgia, serif";
-    // word wrap value
-    const maxW = rx - lx - 130;
-    const words=(value||"—").split(" ");
-    let line=""; let lines=[];
-    for(const w of words){
-      const t=line?line+" "+w:w;
-      if(ctx.measureText(t).width>maxW&&line){lines.push(line);line=w;}else line=t;
+
+  function field(label, value, bigBold) {
+    if (!value || value.trim() === "" || value === "—") value = "—";
+    ctx.fillStyle = MUTED; ctx.font = "12px Georgia, serif";
+    ctx.fillText(label, PL, Y);
+
+    ctx.fillStyle = bigBold ? NAVY : TEXT;
+    ctx.font = bigBold ? "bold 20px 'Times New Roman', Georgia, serif" : "14px Georgia, serif";
+
+    // Word wrap
+    const maxW = PR - COL2 - 10;
+    const words = value.split(" ");
+    let line = "", lines = [];
+    for (const w of words) {
+      const t = line ? line + " " + w : w;
+      if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; }
+      else line = t;
     }
-    if(line)lines.push(line);
-    lines.forEach((l,i)=>ctx.fillText(l, lx+130, y+i*(highlight?26:20)));
-    y+=highlight?38:Math.max(28, lines.length*20+8);
+    if (line) lines.push(line);
+    const lh = bigBold ? 28 : 20;
+    lines.forEach((l, i) => ctx.fillText(l, COL2, Y + i * lh));
+    Y += bigBold ? 40 : Math.max(28, lines.length * 20 + 4);
   }
-  function gap(n=10){y+=n;}
 
-  // Customer
-  secLabel("Customer Details");
-  ctx.fillStyle=TEXT; ctx.font="bold 18px 'Times New Roman', Georgia, serif";
-  ctx.fillText("Mr. / Ms.  "+(c.name||"—"), lx, y); y+=32;
-  dataRow("Phone:", c.mobile?"+91 "+c.mobile:"—");
-  dataRow("Address:", c.address||"—");
+  function gap(n = 12) { Y += n; }
+
+  // ── CUSTOMER ──
+  sectionHead("CUSTOMER DETAILS");
+  ctx.fillStyle = TEXT; ctx.font = "bold 17px 'Times New Roman', Georgia, serif";
+  ctx.fillText("Mr. / Ms.  " + (c.name || "—"), PL, Y); Y += 30;
+  field("Phone:", c.mobile ? "+91 " + c.mobile : "");
+  field("Address:", c.address || "");
   gap();
 
-  // Machine
-  secLabel("Machine & Service");
-  dataRow("Machine:", (c.machineType||"")+(c.machineBrand?" — "+c.machineBrand:""));
-  if(c.serialNumber) dataRow("Serial No:", c.serialNumber);
-  dataRow("Service Done:", c.serviceDetails||"—");
+  // ── MACHINE ──
+  sectionHead("MACHINE & SERVICE");
+  const machine = [c.machineType, c.machineBrand].filter(Boolean).join(" — ");
+  field("Machine:", machine || "");
+  if (c.serialNumber) field("Serial No:", c.serialNumber);
+  field("Service Done:", c.serviceDetails || "");
   gap();
 
-  // Warranty
-  secLabel("Warranty Validity");
+  // ── WARRANTY ──
+  sectionHead("WARRANTY VALIDITY");
   const wDate = c.warrantyEnd
-    ? new Date(c.warrantyEnd).toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"})
-    : "—";
-  dataRow("Valid Till:", wDate, true);
+    ? new Date(c.warrantyEnd).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })
+    : "";
+  field("Valid Till:", wDate, true); // big bold date
   gap(4);
 
-  // ── Signature ──
-  ctx.fillStyle=LINE; ctx.fillRect(lx, y, rx-lx, 1); y+=18;
-  ctx.fillStyle=MUTED; ctx.font="12px Georgia, serif";
-  ctx.fillText("Technician:", lx, y+4);
+  // ── SIGNATURE ──
+  ctx.fillStyle = BORDER; ctx.fillRect(PL, Y, PR - PL, 1); Y += 20;
 
-  if(c._sigImg){
-    ctx.drawImage(c._sigImg, lx+130, y-32, 160, 52);
+  ctx.fillStyle = MUTED; ctx.font = "12px Georgia, serif";
+  ctx.fillText("Technician:", PL, Y + 4);
+
+  const sigX = COL2, sigY = Y - 30, sigW = 170, sigH = 54;
+  if (c._sigImg) {
+    ctx.drawImage(c._sigImg, sigX, sigY, sigW, sigH);
   } else {
-    ctx.fillStyle=DARK; ctx.font="italic 20px Georgia, serif";
-    ctx.fillText(tech, lx+130, y+4);
+    ctx.fillStyle = TEXT; ctx.font = "italic 20px Georgia, serif";
+    ctx.fillText(tech, sigX, Y + 4);
   }
-  ctx.fillStyle=TEXT; ctx.fillRect(lx+130, y+14, 170, 1);
-  ctx.fillStyle=MUTED; ctx.font="10px Georgia, serif";
-  ctx.fillText("Authorised Signature", lx+130, y+28);
-  y+=44;
+  // Signature underline + label
+  ctx.fillStyle = TEXT; ctx.fillRect(sigX, Y + 16, 175, 1);
+  ctx.fillStyle = MUTED; ctx.font = "10px Georgia, serif";
+  ctx.fillText("Authorised Signature", sigX, Y + 30);
 
-  // Cert number inside card (small)
-  ctx.fillStyle=MUTED; ctx.font="10px Georgia, serif";
-  ctx.textAlign="right"; ctx.fillText("Cert: "+certNo, rx, y+6); ctx.textAlign="left";
+  // Cert no — bottom right of card
+  ctx.fillStyle = MUTED; ctx.font = "10px Georgia, serif";
+  ctx.textAlign = "right"; ctx.fillText("Cert: " + certNo, PR, cardBot - 14); ctx.textAlign = "left";
 
-  // ── Navy footer ──
-  const FY=H-148;
-  ctx.fillStyle=NAVY; ctx.fillRect(0,FY,W,148);
-  const fgr=ctx.createLinearGradient(0,0,W,0);
-  fgr.addColorStop(0,"#c9941a"); fgr.addColorStop(0.5,"#f5d080"); fgr.addColorStop(1,"#c9941a");
-  ctx.fillStyle=fgr; ctx.fillRect(0,FY,W,4);
+  // ══════════════════════════════
+  //  FOOTER — navy with contact details
+  // ══════════════════════════════
+  const FY = H - 158;
+  ctx.fillStyle = NAVY; ctx.fillRect(0, FY, W, 158);
 
-  ctx.fillStyle=WHITE; ctx.font="bold 13px Georgia, serif";
-  ctx.fillText("For Service", 36, FY+32);
-  ctx.fillStyle="rgba(255,255,255,0.2)"; ctx.fillRect(36,FY+40,W-72,1);
+  // Gold shimmer top border on footer
+  ctx.fillStyle = hBorder;
+  ctx.fillRect(0, FY, W, 4);
 
-  ctx.fillStyle=GOLD2; ctx.font="13px Georgia, serif";
-  let fy=FY+60;
-  if(phone)  {ctx.fillText("📞  "+phone,  36,fy); fy+=24;}
-  if(phone2) {ctx.fillText("📞  "+phone2, 36,fy); fy+=24;}
-  if(email)  {ctx.fillText("✉   "+email,  36,fy); fy+=24;}
-  if(addr)   {ctx.fillText("📍  "+addr,   36,fy);}
+  ctx.fillStyle = WHITE;
+  ctx.font = "bold 14px Georgia, serif";
+  ctx.fillText("For Service", 36, FY + 34);
+
+  // Thin divider
+  ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(36, FY + 42, W - 72, 1);
+
+  // Contact rows
+  ctx.font = "13px Georgia, serif";
+  let fy = FY + 62;
+
+  function footerLine(icon, text) {
+    if (!text) return;
+    ctx.fillStyle = GOLD2;
+    ctx.fillText(icon, 36, fy);
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.fillText(text, 68, fy);
+    fy += 24;
+  }
+  footerLine("📞", phone);
+  footerLine("📞", phone2);
+  footerLine("✉", email);
+  footerLine("📍", addr);
 }
 
-function roundedRect(ctx,x,y,w,h,r,color){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
-  ctx.closePath(); ctx.fillStyle=color; ctx.fill();
-}
-
-function buildCanvas(customer){
-  const W=680, H=1000;
-  const canvas=document.createElement("canvas");
-  canvas.width=W; canvas.height=H;
-  drawCard(canvas.getContext("2d"), customer, W, H);
+// ── EXPORTS ──
+function makeCanvas(c, W, H) {
+  const canvas = document.createElement("canvas");
+  canvas.width = W; canvas.height = H;
+  drawWarrantyCard(canvas.getContext("2d"), c, W, H);
   return canvas;
 }
 
-export function generateWarrantyCard(customer){
-  const certNo="WC-"+String(customer.id||"0001").padStart(4,"0")+"-"+new Date().getFullYear();
-  const safe=(customer.name||"customer").replace(/\s+/g,"_");
-  function finish(c){
-    const canvas=buildCanvas(c);
-    const a=document.createElement("a");
-    a.download=`WarrantyCard_${safe}_${certNo}.png`;
-    a.href=canvas.toDataURL("image/png"); a.click();
+function withSig(customer, cb) {
+  const sig = customer.signatureBase64;
+  if (sig && sig.startsWith("data:image")) {
+    const img = new Image();
+    img.onload  = () => cb({ ...customer, _sigImg: img });
+    img.onerror = () => cb(customer);
+    img.src = sig;
+  } else {
+    cb(customer);
   }
-  if(customer.signatureBase64?.startsWith("data:image")){
-    const img=new Image();
-    img.onload=()=>finish({...customer,_sigImg:img});
-    img.onerror=()=>finish(customer);
-    img.src=customer.signatureBase64;
-  } else finish(customer);
 }
 
-export function generateWarrantyCardBlob(customer){
-  return new Promise(resolve=>{
-    function finish(c){
-      buildCanvas(c).toBlob(b=>resolve(b),"image/png");
-    }
-    if(customer.signatureBase64?.startsWith("data:image")){
-      const img=new Image();
-      img.onload=()=>finish({...customer,_sigImg:img});
-      img.onerror=()=>finish(customer);
-      img.src=customer.signatureBase64;
-    } else finish(customer);
+export function generateWarrantyCard(customer) {
+  const certNo  = "WC-" + String(customer.id || "0001").padStart(4, "0") + "-" + new Date().getFullYear();
+  const safeName = (customer.name || "customer").replace(/\s+/g, "_");
+  withSig(customer, (c) => {
+    const canvas = makeCanvas(c, 680, 1020);
+    const a = document.createElement("a");
+    a.download = `WarrantyCard_${safeName}_${certNo}.png`;
+    a.href = canvas.toDataURL("image/png");
+    a.click();
+  });
+}
+
+export function generateWarrantyCardBlob(customer) {
+  return new Promise((resolve) => {
+    withSig(customer, (c) => {
+      makeCanvas(c, 680, 1020).toBlob(resolve, "image/png");
+    });
   });
 }

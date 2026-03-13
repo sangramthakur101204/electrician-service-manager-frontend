@@ -905,10 +905,12 @@ export default function TechApp({ user, onLogout }) {
               Order: Invoice WA → (if warranty) Warranty Card WA → (if warranty) Download → PDF → Home
           ══════════════════════════════════════════════════ */}
           {step==="done" && invoice && (()=>{
-            const custObj = doneData?.customer || selected?.customer || {};
-            const mob     = custObj?.mobile || selected?.customerMobile || doneData?.customerMobile || "";
+            const custObj  = doneData?.customer || selected?.customer || {};
+            const rawMob   = custObj?.mobile || selected?.customer?.mobile
+                           || selected?.customerMobile || doneData?.customerMobile || "";
+            const mob      = rawMob.toString().replace(/\D/g,"").replace(/^91/,"").slice(-10);
             const custName = custObj?.name || selected?.customerName || "";
-            const co      = companySettings?.companyName || "Matoshree Enterprises";
+            const co       = companySettings?.companyName || "Matoshree Enterprises";
             return (
               <div style={{padding:"16px"}}>
 
