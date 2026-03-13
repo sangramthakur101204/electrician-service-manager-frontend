@@ -1,5 +1,5 @@
 // src/components/owner/AllInvoices.jsx
-import { openExternal, downloadBlob } from "../utils/openExternal";
+import { openExternal, downloadBlob } from "../../utils/openExternal";
 import { useState, useEffect, useMemo } from "react";
 import { useToast, confirm } from "../Toast.jsx";
 import { authHeader, downloadInvoicePdf , apiFetch } from "../../services/api";

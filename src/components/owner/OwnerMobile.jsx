@@ -1,5 +1,5 @@
 // src/components/owner/OwnerMobile.jsx
-import { openExternal, downloadBlob } from "../utils/openExternal";
+import { openExternal, downloadBlob } from "../../utils/openExternal";
 // Mobile-first owner interface — for owners who are out in the field on their phone
 import { useState, useEffect } from "react";
 import { authHeader, apiFetch, getAllCustomers } from "../../services/api";
