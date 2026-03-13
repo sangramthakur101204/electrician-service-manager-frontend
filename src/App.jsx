@@ -6,6 +6,7 @@ import {
   RefreshCw, MapPin, Settings as SettingsIcon, X
 } from "lucide-react";
 import Login          from "./components/Login";
+import ErrorBoundary  from "./components/ErrorBoundary";
 import OwnerDashboard from "./components/owner/OwnerDashboard";
 import CustomerList   from "./components/CustomerList";
 import Reminders      from "./components/Reminders";
@@ -101,8 +102,8 @@ export default function App() {
     setShowMore(false);
   };
 
-  if (!user) return <Login onLogin={handleLogin} />;
-  if (user.role === "TECHNICIAN") return <TechApp user={user} onLogout={handleLogout} />;
+  if (!user) return <ErrorBoundary><Login onLogin={handleLogin} /></ErrorBoundary>;
+  if (user.role === "TECHNICIAN") return <ErrorBoundary><TechApp user={user} onLogout={handleLogout} /></ErrorBoundary>;
 
   // ── CONTENT (same for desktop + mobile) ──────────────────────────────────
   const content = loading ? (
@@ -250,6 +251,7 @@ export default function App() {
   // DESKTOP LAYOUT (unchanged)
   // ══════════════════════════════════════════════════════
   return (
+    <ErrorBoundary>
     <div className="app-shell">
       <header className="topbar">
         <div className="topbar-logo">
@@ -294,5 +296,6 @@ export default function App() {
         </div>
       </main>
     </div>
+    </ErrorBoundary>
   );
 }
