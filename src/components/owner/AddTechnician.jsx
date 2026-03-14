@@ -189,43 +189,21 @@ export default function AddTechnician() {
     return () => clearInterval(t);
   }, []);
 
-  // Real-time SSE — tech online/offline status instantly
+  // Real-time polling every 8s — SSE Render pe reliable nahi hai
   useEffect(() => {
-    const token = localStorage.getItem("token") || "";
-    const url = `${API}/sse/tech-status`;
-    let es;
-    function connect() {
-      es = new EventSource(url + "?token=" + encodeURIComponent(token));
-
-      // Initial full status list on connect
-      es.addEventListener("status", (e) => {
-        try {
-          const list = JSON.parse(e.data);
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiFetch(`${API}/technicians`, { headers: authHeader() });
+        if (res.ok) {
+          const freshTechs = await res.json();
           setTechs(prev => prev.map(t => {
-            const found = list.find(s => s.id === t.id);
-            return found ? { ...t, isActive: found.isOnline } : t;
+            const fresh = freshTechs.find(f => f.id === t.id);
+            return fresh ? { ...t, isActive: fresh.isActive } : t;
           }));
-        } catch {}
-      });
-
-      // Single tech update
-      es.addEventListener("update", (e) => {
-        try {
-          const upd = JSON.parse(e.data);
-          setTechs(prev => prev.map(t =>
-            t.id === upd.id ? { ...t, isActive: upd.isOnline } : t
-          ));
-        } catch {}
-      });
-
-      es.onerror = () => {
-        es.close();
-        // Reconnect after 5s
-        setTimeout(connect, 5000);
-      };
-    }
-    connect();
-    return () => es && es.close();
+        }
+      } catch(e) {}
+    }, 8000);
+    return () => clearInterval(interval);
   }, []);
 
   // Active time — recalculate every 30s so it stays live

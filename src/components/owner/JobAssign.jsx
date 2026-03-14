@@ -81,33 +81,21 @@ export default function JobAssign() {
 
   useEffect(() => { fetchAll(); }, []);
 
-  // Real-time tech online/offline via SSE
+  // Real-time polling every 8s — SSE Render pe reliable nahi hai
   useEffect(() => {
-    const token = localStorage.getItem("token") || "";
-    let es;
-    function connect() {
-      es = new EventSource(`${API}/sse/tech-status?token=${encodeURIComponent(token)}`);
-      es.addEventListener("status", (e) => {
-        try {
-          const list = JSON.parse(e.data);
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiFetch(`${API}/technicians`, { headers: authHeader() });
+        if (res.ok) {
+          const freshTechs = await res.json();
           setTechnicians(prev => prev.map(t => {
-            const found = list.find(s => s.id === t.id);
-            return found ? { ...t, isActive: found.isOnline } : t;
+            const fresh = freshTechs.find(f => f.id === t.id);
+            return fresh ? { ...t, isActive: fresh.isActive } : t;
           }));
-        } catch {}
-      });
-      es.addEventListener("update", (e) => {
-        try {
-          const upd = JSON.parse(e.data);
-          setTechnicians(prev => prev.map(t =>
-            t.id === upd.id ? { ...t, isActive: upd.isOnline } : t
-          ));
-        } catch {}
-      });
-      es.onerror = () => { es.close(); setTimeout(connect, 5000); };
-    }
-    connect();
-    return () => es && es.close();
+        }
+      } catch(e) {}
+    }, 8000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchAll = async () => {
