@@ -73,10 +73,6 @@ export default function Analytics({ customers = [] }) {
   const [ref5, w5] = useWidth(); // monthly service trend
 
   useEffect(() => { fetchData(); }, []);
-  useEffect(() => {
-    const t = setInterval(() => fetchData(), 30000);
-    return () => clearInterval(t);
-  }, []);
 
   const fetchData = async () => {
     setLoading(true);

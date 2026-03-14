@@ -32,16 +32,6 @@ export default function OwnerDashboard({ customers, expiring, onNavigate }) {
 
   useEffect(() => { fetchStats(); fetchInvoices(); fetchAllJobs(); }, []);
 
-  // Silent refresh every 20s
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchStats(true);
-      fetchInvoices();
-      fetchAllJobs();
-    }, 20000);
-    return () => clearInterval(interval);
-  }, []);
-
   const fetchStats = async (silent = false) => {
     if (!silent) setLoading(true);
     try { const r = await apiFetch(`${API}/stats/dashboard`, { headers: authHeader() }); setStats(await r.json()); }

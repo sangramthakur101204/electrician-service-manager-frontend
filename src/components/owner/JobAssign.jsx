@@ -94,19 +94,9 @@ export default function JobAssign() {
           }));
         }
       } catch(e) {}
-    }, 8000);
-
-    const jobsInterval = setInterval(async () => {
-      try {
-        const res = await apiFetch(`${API}/jobs`, { headers: authHeader() });
-        if (res.ok) {
-          const fresh = await res.json();
-          setJobs(Array.isArray(fresh) ? fresh : []);
-        }
-      } catch(e) {}
     }, 15000);
 
-    return () => { clearInterval(techInterval); clearInterval(jobsInterval); };
+    return () => { clearInterval(techInterval); };
   }, []);
 
   const fetchAll = async () => {

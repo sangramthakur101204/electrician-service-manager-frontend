@@ -183,21 +183,6 @@ export default function AddTechnician() {
 
   useEffect(() => { fetchAll(); }, []);
 
-  // Periodic silent refresh every 30s — no loading spinner
-  useEffect(() => {
-    const silentSync = async () => {
-      try {
-        const freshTechs = await getTechnicians();
-        setTechs(prev => prev.map(t => {
-          const fresh = freshTechs.find(f => f.id === t.id);
-          return fresh ? { ...t, isActive: fresh.isActive } : t;
-        }));
-      } catch(e) {}
-    };
-    const t = setInterval(silentSync, 30000);
-    return () => clearInterval(t);
-  }, []);
-
   // Real-time polling every 8s — SSE Render pe reliable nahi hai
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -211,7 +196,7 @@ export default function AddTechnician() {
           }));
         }
       } catch(e) {}
-    }, 8000);
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -232,7 +217,7 @@ export default function AddTechnician() {
         });
         return updated;
       });
-    }, 30000);
+    }, 60000);
     return () => clearInterval(t);
   }, [techs]);
 
