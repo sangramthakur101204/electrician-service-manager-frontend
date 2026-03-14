@@ -179,7 +179,7 @@ export default function LiveTracking({ onNavigate }) {
           ${ago?`<div style="font-size:11px;color:${ago.stale?"#f59e0b":"#94a3b8"};font-weight:${ago.stale?700:400};margin-bottom:8px;">🕐 ${ago.text}${ago.stale?" ⚠️":""}</div>`:""}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
             <a href="tel:${loc.mobile}" style="text-align:center;padding:8px;border-radius:8px;
-              background:rgba(16,185,129,0.1);color:#059669;font-weight:700;font-size:12px;text-decoration:none;">📞 Call</button>
+              background:rgba(16,185,129,0.1);color:#059669;font-weight:700;font-size:12px;text-decoration:none;">📞 Call</a>
             <button onClick={()=>openExternal("https://maps.google.com?q=${loc.latitude},${loc.longitude}")} style={{background:"none",border:"none",cursor:"pointer",padding:0}}>🗺️ Maps</button>
           </div>
         </div>`;
