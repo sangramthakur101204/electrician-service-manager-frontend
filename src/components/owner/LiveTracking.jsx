@@ -97,10 +97,10 @@ export default function LiveTracking({ onNavigate }) {
         preferCanvas:true,
         zoomSnap: 0.5,
       });
-      // Fix map pan/resize issues
-      setTimeout(() => {
-        if (leafMap.current) leafMap.current.invalidateSize();
-      }, 300);
+      // Fix map pan/resize issues - call multiple times
+      setTimeout(() => { if (leafMap.current) leafMap.current.invalidateSize(); }, 100);
+      setTimeout(() => { if (leafMap.current) leafMap.current.invalidateSize(); }, 500);
+      setTimeout(() => { if (leafMap.current) leafMap.current.invalidateSize(); }, 1000);
       leafMap.current.setView(center, 13);
       window.L.tileLayer(TILE_URL, { attribution:TILE_ATTR, maxZoom:19 }).addTo(leafMap.current);
     }
@@ -260,7 +260,8 @@ export default function LiveTracking({ onNavigate }) {
     <div style={{ display:"flex", flexDirection:"column", gap:12,
       height: isMob ? "calc(100vh - 116px)" : "calc(100vh - 130px)",
       minHeight: isMob ? "auto" : 520,
-      overflow: "hidden" }}>
+      overflow: "hidden",
+      position: "relative" }}>
 
       {/* Pulse CSS + Leaflet fixes */}
       <style>{`
@@ -435,7 +436,14 @@ export default function LiveTracking({ onNavigate }) {
             </div>
           ) : (
             <>
-              <div ref={mapRef} style={{height:isMob?"calc(100vh - 116px - 180px)":"100%",width:"100%",minHeight:isMob?250:0,position:"relative",zIndex:1}}/>
+              <div ref={mapRef} style={{
+        height: isMob ? "calc(100vh - 116px - 180px)" : "100%",
+        width: "100%",
+        minHeight: isMob ? 250 : 0,
+        position: "relative",
+        zIndex: 1,
+        isolation: "isolate"
+      }}/>
 
               {/* Legend */}
               <div style={{position:"absolute",bottom:16,left:16,zIndex:1000,

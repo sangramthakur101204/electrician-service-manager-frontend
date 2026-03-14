@@ -13,6 +13,10 @@ export default function Reminders({ expiring, customers, onRefresh }) {
   const [loadingAuto,  setLoadingAuto]  = useState(false);
 
   useEffect(() => { fetchAutoReminders(); }, []);
+  useEffect(() => {
+    const t = setInterval(() => fetchAutoReminders(), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   const fetchAutoReminders = async () => {
     setLoadingAuto(true);

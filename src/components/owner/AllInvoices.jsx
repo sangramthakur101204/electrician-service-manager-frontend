@@ -30,6 +30,10 @@ export default function AllInvoices() {
   const [expandedId,  setExpandedId]  = useState(null);
 
   useEffect(() => { fetchInvoices(); }, []);
+  useEffect(() => {
+    const t = setInterval(() => fetchInvoices(), 20000);
+    return () => clearInterval(t);
+  }, []);
 
   const fetchInvoices = async () => {
     setLoading(true);
