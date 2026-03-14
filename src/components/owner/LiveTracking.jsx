@@ -387,8 +387,8 @@ export default function LiveTracking({ onNavigate }) {
                         textAlign:"center",border:"1px solid rgba(16,185,129,0.2)"}}>📞 Call</a>
                     <button onClick={(e)=>{e.stopPropagation();openExternal(`https://maps.google.com?q=${loc.latitude},${loc.longitude}`);}}
                       style={{padding:"7px",background:"rgba(59,130,246,0.08)",color:"#2563eb",
-                        borderRadius:8,fontSize:12,fontWeight:700,border:"none",cursor:"pointer",
-                        textAlign:"center",border:"1px solid rgba(59,130,246,0.2)"}}>🗺️ Maps</button>
+                        borderRadius:8,fontSize:12,fontWeight:700,border:"1px solid rgba(59,130,246,0.2)",cursor:"pointer",
+                        textAlign:"center"}}>🗺️ Maps</button>
                   </div>
                 </div>
               );

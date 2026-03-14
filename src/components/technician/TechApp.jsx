@@ -845,7 +845,7 @@ export default function TechApp({ user, onLogout }) {
               {!done && mob && (
                 <a href="#" onClick={(e)=>{e.preventDefault();openExternal("https://wa.me/91"+mob+"?text="+encodeURIComponent("Namaste! Main "+(user?.name||"")+" hoon, "+(companySettings?.companyName||"ElectroServe")+" se. Aapka "+(selected.machineType||"machine")+" dekhne aa raha hoon."))}} className="tech-detail-wa-btn">
                   💬 Customer ko WhatsApp Karo
-                </button>
+                </a>
               )}
 
               {/* Already done — invoice banana ho toh */}
