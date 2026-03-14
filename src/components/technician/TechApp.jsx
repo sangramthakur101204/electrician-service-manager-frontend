@@ -138,7 +138,7 @@ export default function TechApp({ user, onLogout }) {
       try {
         await Promise.all([
           apiFetch(`${API}/tech-sessions/start`, { method:"POST", headers:authHeader() }),
-          apiFetch(`${API}/users/technicians/${user?.id}/toggle?active=true`, { method:"PUT", headers:authHeader() }),
+          apiFetch(`${API}/technicians/${user?.id}/toggle?active=true`, { method:"PUT", headers:authHeader() }),
         ]);
       } catch(e) {}
     } else {
@@ -151,7 +151,7 @@ export default function TechApp({ user, onLogout }) {
         await Promise.all([
           apiFetch(`${API}/tech-sessions/end`, { method:"POST", headers:authHeader() }),
           fetch(`${API}/location`, { method:"DELETE", headers:authHeader() }),
-          apiFetch(`${API}/users/technicians/${user?.id}/toggle?active=false`, { method:"PUT", headers:authHeader() }),
+          apiFetch(`${API}/technicians/${user?.id}/toggle?active=false`, { method:"PUT", headers:authHeader() }),
         ]);
       } catch(e) {}
     }
@@ -823,7 +823,7 @@ export default function TechApp({ user, onLogout }) {
                 <div className="tech-detail-card-title">👤 Customer</div>
                 <div className="tech-detail-name">{name}</div>
                 {mob  && <a href={`tel:${mob}`} className="tech-detail-call-btn">📞 {mob} — Call Karo</a>}
-                {addr && <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`} target="_blank" rel="noreferrer" className="tech-detail-map-btn">📍 {addr}</a>}
+                {addr && <button onClick={()=>openExternal(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`)} className="tech-detail-map-btn" style={{background:"none",border:"none",cursor:"pointer",textAlign:"left"}}>📍 {addr}</button>}
               </div>
 
               <div className="tech-detail-card">
@@ -845,7 +845,7 @@ export default function TechApp({ user, onLogout }) {
               {!done && mob && (
                 <a href="#" onClick={(e)=>{e.preventDefault();openExternal("https://wa.me/91"+mob+"?text="+encodeURIComponent("Namaste! Main "+(user?.name||"")+" hoon, "+(companySettings?.companyName||"ElectroServe")+" se. Aapka "+(selected.machineType||"machine")+" dekhne aa raha hoon."))}} className="tech-detail-wa-btn">
                   💬 Customer ko WhatsApp Karo
-                </a>
+                </button>
               )}
 
               {/* Already done — invoice banana ho toh */}

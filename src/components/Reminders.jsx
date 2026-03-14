@@ -52,12 +52,12 @@ export default function Reminders({ expiring, customers, onRefresh }) {
   };
 
   const buildManualUrl = (c) => {
-    const msg = `Namaste ${c.name} ji! 🙏\n\nAapki ${c.machineType||""} (${c.machineBrand||""}) ki warranty ${daysLeft(c.warrantyEnd)} din mein expire hogi ⚠️\n\nDate: ${c.warrantyEnd}\n\n- Matoshree Enterprises`;
+    const msg = `Namaste ${c.name} ji! 🙏\n\nAapki ${c.machineType||""} (${c.machineBrand||""}) ki warranty ${daysLeft(c.warrantyEnd)} din mein expire hogi ⚠️\n\nDate: ${c.warrantyEnd}\n\n- ${companyName || "ElectroServe"}`;
     return `https://wa.me/91${c.mobile}?text=${encodeURIComponent(msg)}`;
   };
 
   const buildServiceUrl = (c) => {
-    const msg = `Namaste ${c.name} ji! 🙏\n\nAapki ${c.machineType||""} (${c.machineBrand||""}) ki service pending hai.\nJab bhi time mile, humse contact karein.\n\n- Matoshree Enterprises`;
+    const msg = `Namaste ${c.name} ji! 🙏\n\nAapki ${c.machineType||""} (${c.machineBrand||""}) ki service pending hai.\nJab bhi time mile, humse contact karein.\n\n- ${companyName || "ElectroServe"}`;
     return `https://wa.me/91${c.mobile}?text=${encodeURIComponent(msg)}`;
   };
 

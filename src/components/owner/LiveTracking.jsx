@@ -179,10 +179,8 @@ export default function LiveTracking({ onNavigate }) {
           ${ago?`<div style="font-size:11px;color:${ago.stale?"#f59e0b":"#94a3b8"};font-weight:${ago.stale?700:400};margin-bottom:8px;">🕐 ${ago.text}${ago.stale?" ⚠️":""}</div>`:""}
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
             <a href="tel:${loc.mobile}" style="text-align:center;padding:8px;border-radius:8px;
-              background:rgba(16,185,129,0.1);color:#059669;font-weight:700;font-size:12px;text-decoration:none;">📞 Call</a>
-            <a href="https://maps.google.com?q=${loc.latitude},${loc.longitude}" target="_blank" rel="noreferrer"
-              style="text-align:center;padding:8px;border-radius:8px;
-              background:rgba(59,130,246,0.1);color:#2563eb;font-weight:700;font-size:12px;text-decoration:none;">🗺️ Maps</a>
+              background:rgba(16,185,129,0.1);color:#059669;font-weight:700;font-size:12px;text-decoration:none;">📞 Call</button>
+            <button onClick={()=>openExternal("https://maps.google.com?q=${loc.latitude},${loc.longitude}")} style={{background:"none",border:"none",cursor:"pointer",padding:0}}>🗺️ Maps</button>
           </div>
         </div>`;
 
@@ -386,12 +384,11 @@ export default function LiveTracking({ onNavigate }) {
                     <a href={`tel:${loc.mobile}`} onClick={e=>e.stopPropagation()}
                       style={{padding:"7px",background:"rgba(16,185,129,0.08)",color:"#059669",
                         borderRadius:8,fontSize:12,fontWeight:700,textDecoration:"none",
-                        textAlign:"center",border:"1px solid rgba(16,185,129,0.2)"}}>📞 Call</a>
-                    <a href={`https://maps.google.com?q=${loc.latitude},${loc.longitude}`}
-                      target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
+                        textAlign:"center",border:"1px solid rgba(16,185,129,0.2)"}}>📞 Call</button>
+                    <button onClick={(e)=>{e.stopPropagation();openExternal(`https://maps.google.com?q=${loc.latitude},${loc.longitude}`);}}
                       style={{padding:"7px",background:"rgba(59,130,246,0.08)",color:"#2563eb",
-                        borderRadius:8,fontSize:12,fontWeight:700,textDecoration:"none",
-                        textAlign:"center",border:"1px solid rgba(59,130,246,0.2)"}}>🗺️ Maps</a>
+                        borderRadius:8,fontSize:12,fontWeight:700,border:"none",cursor:"pointer",
+                        textAlign:"center",border:"1px solid rgba(59,130,246,0.2)"}}>🗺️ Maps</button>
                   </div>
                 </div>
               );

@@ -1,3 +1,4 @@
+import { openExternal } from "../utils/openExternal";
 // src/components/CustomerHistory.jsx
 import { useState, useEffect } from "react";
 import { useToast } from "./Toast.jsx";
@@ -156,13 +157,12 @@ export default function CustomerHistory({ customer, onBack }) {
                   {customer.address && (
                     <div style={{ gridColumn:"1/-1" }}>
                       <div className="ch-label">Address</div>
-                      <a href={customer.latitude&&customer.longitude
+                      <button onClick={()=>openExternal(customer.latitude&&customer.longitude
                           ?`https://www.google.com/maps?q=${customer.latitude},${customer.longitude}`
-                          :`https://www.google.com/maps/search/${encodeURIComponent(customer.address)}`}
-                        target="_blank" rel="noreferrer"
-                        style={{ color:"#3b82f6", fontWeight:600, fontSize:13, textDecoration:"none" }}>
+                          :`https://www.google.com/maps/search/${encodeURIComponent(customer.address)}`)}
+                        style={{ color:"#3b82f6", fontWeight:600, fontSize:13, textDecoration:"none", background:"none", border:"none", cursor:"pointer" }}>
                         📍 {customer.address}
-                      </a>
+                      </button>
                     </div>
                   )}
                 </div>

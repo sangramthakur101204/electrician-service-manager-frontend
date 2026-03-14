@@ -13,7 +13,7 @@ function drawWarrantyCard(ctx, c, W, H) {
   const MUTED  = "#6B7C93";
   const BORDER = "#D5DAE8";
 
-  const co     = c.companyName    || "Matoshree Enterprises";
+  const co     = c.companyName    || c.companyName || "ElectroServe";
   const phone  = c.companyPhone   || "";
   const phone2 = c.companyPhone2  || "";
   const email  = c.companyEmail   || "";

@@ -35,7 +35,7 @@ export default function Login({ onLogin }) {
             <Zap size={32} strokeWidth={2.5} />
           </div>
           <h1 className="login-title">ElectroServe</h1>
-          <p className="login-subtitle">Matoshree Enterprises</p>
+          <p className="login-subtitle">Electrician Service Manager</p>
         </div>
 
         {/* Form */}

@@ -258,9 +258,8 @@ export default function AllInvoices() {
                   </>}
                   <button onClick={()=>downloadInvoicePdf(inv.id,inv.customer?.name,inv.invoiceNumber)} style={actionBtn("#6366f1","rgba(99,102,241,0.08)")}>📄 PDF</button>
                   {inv.customer?.mobile && (
-                    <a href={`https://wa.me/91${inv.customer.mobile}?text=${encodeURIComponent(`Namaste ${inv.customer?.name||""} ji! Aapka invoice ${inv.invoiceNumber} — Total: ${fmt(inv.totalAmount)}.`)}`}
-                      target="_blank" rel="noreferrer"
-                      style={{...actionBtn("#25d366","rgba(37,211,102,0.08)"),textDecoration:"none"}}>💬 WA</a>
+                    <button onClick={()=>openExternal(`https://wa.me/91${inv.customer.mobile}?text=${encodeURIComponent(`Namaste ${inv.customer?.name||""} ji! Aapka invoice ${inv.invoiceNumber} — Total: ${fmt(inv.totalAmount)}.`)}`)}
+                      style={{...actionBtn("#25d366","rgba(37,211,102,0.08)")}}>💬 WA</button>
                   )}
                   <button onClick={()=>setEditInv({...inv})} style={actionBtn("#f59e0b","rgba(245,158,11,0.08)")}>✏️ Edit</button>
                   <button onClick={()=>deleteInvoice(inv.id)} style={{...actionBtn("#ef4444","rgba(239,68,68,0.08)"),marginLeft:"auto"}}>🗑️</button>
