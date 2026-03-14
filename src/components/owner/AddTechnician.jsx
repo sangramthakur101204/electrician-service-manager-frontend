@@ -183,6 +183,12 @@ export default function AddTechnician() {
 
   useEffect(() => { fetchAll(); }, []);
 
+  // Periodic re-fetch every 60s — isActive sync karo
+  useEffect(() => {
+    const t = setInterval(() => fetchAll(), 60000);
+    return () => clearInterval(t);
+  }, []);
+
   // Real-time SSE — tech online/offline status instantly
   useEffect(() => {
     const token = localStorage.getItem("token") || "";
@@ -252,15 +258,32 @@ export default function AddTechnician() {
       ]);
       setTechs(techData);
       setAllInvoices(Array.isArray(invData) ? invData : []);
-      // Compute activeMins from activeStartedAt field on User
-      const activeMap = {};
-      techData.forEach(t => {
-        if (t.isActive && t.activeStartedAt) {
-          const mins = Math.max(0, Math.floor((Date.now() - new Date(t.activeStartedAt).getTime()) / 60000));
-          activeMap[t.id] = { todayMins: mins, lastStatus: "ACTIVE" };
+      // Fetch today's actual session data from backend
+      try {
+        const sessionRes = await apiFetch(`${API}/tech-sessions/today`, { headers: authHeader() });
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          const activeMap = {};
+          sessionData.forEach(s => {
+            // Add current session live time if still active
+            let todayMins = s.todayMins || 0;
+            const tech = techData.find(t => t.id === s.techId);
+            if (tech?.isActive && tech?.activeStartedAt) {
+              const liveMins = Math.max(0, Math.floor((Date.now() - new Date(tech.activeStartedAt).getTime()) / 60000));
+              todayMins += liveMins;
+            }
+            activeMap[s.techId] = { todayMins, lastStatus: s.lastStatus };
+          });
+          // Also add currently active techs not in sessions yet
+          techData.forEach(t => {
+            if (t.isActive && t.activeStartedAt && !activeMap[t.id]) {
+              const mins = Math.max(0, Math.floor((Date.now() - new Date(t.activeStartedAt).getTime()) / 60000));
+              activeMap[t.id] = { todayMins: mins, lastStatus: "ACTIVE" };
+            }
+          });
+          setTodayActive(activeMap);
         }
-      });
-      setTodayActive(activeMap);
+      } catch(e) { console.error("Session fetch failed", e); }
     } catch(e) { console.error(e); }
     finally { setListLoad(false); }
   }
