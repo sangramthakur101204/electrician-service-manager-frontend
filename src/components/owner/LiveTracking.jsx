@@ -92,7 +92,15 @@ export default function LiveTracking({ onNavigate }) {
     }
     if (!leafMap.current) {
       const center = locs.length > 0 ? [locs[0].latitude, locs[0].longitude] : DEFAULT_CENTER;
-      leafMap.current = window.L.map(mapRef.current, { zoomControl:true, preferCanvas:true });
+      leafMap.current = window.L.map(mapRef.current, {
+        zoomControl:true,
+        preferCanvas:true,
+        zoomSnap: 0.5,
+      });
+      // Fix map pan/resize issues
+      setTimeout(() => {
+        if (leafMap.current) leafMap.current.invalidateSize();
+      }, 300);
       leafMap.current.setView(center, 13);
       window.L.tileLayer(TILE_URL, { attribution:TILE_ATTR, maxZoom:19 }).addTo(leafMap.current);
     }
@@ -250,12 +258,17 @@ export default function LiveTracking({ onNavigate }) {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:12,
-      height: isMob ? "calc(100vh - 64px - 52px - 16px)" : "calc(100vh - 130px)",
+      height: isMob ? "calc(100vh - 116px)" : "calc(100vh - 130px)",
       minHeight: isMob ? "auto" : 520,
-      paddingBottom: isMob ? "0" : 0 }}>
+      overflow: "hidden" }}>
 
-      {/* Pulse CSS */}
+      {/* Pulse CSS + Leaflet fixes */}
       <style>{`
+        .leaflet-control-attribution { display: none !important; }
+        .leaflet-control-zoom { z-index: 500 !important; }
+        .leaflet-control-container { z-index: 500 !important; }
+        .leaflet-pane { z-index: 400 !important; }
+        .leaflet-top, .leaflet-bottom { z-index: 500 !important; }
         @keyframes livePulse {
           0%   { transform:scale(0.8); opacity:0.7; }
           100% { transform:scale(2.4); opacity:0; }
@@ -422,7 +435,7 @@ export default function LiveTracking({ onNavigate }) {
             </div>
           ) : (
             <>
-              <div ref={mapRef} style={{height:isMob?"calc(100vh - 64px - 52px - 200px)":"100%",width:"100%",minHeight:isMob?260:0}}/>
+              <div ref={mapRef} style={{height:isMob?"calc(100vh - 116px - 180px)":"100%",width:"100%",minHeight:isMob?250:0,position:"relative",zIndex:1}}/>
 
               {/* Legend */}
               <div style={{position:"absolute",bottom:16,left:16,zIndex:1000,

@@ -88,6 +88,18 @@ export default function App() {
     finally { setLoading(false); setRefreshing(false); }
   };
 
+  // Silent customers refresh every 30s — no loading spinner
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const [cData, eData] = await Promise.all([getAllCustomers(), getExpiringWarranty()]);
+        setCustomers(cData);
+        setExpiring(eData);
+      } catch(e) {}
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleLogin  = (data) => setUser(data);
   const handleLogout = () => {
     localStorage.removeItem("token");
