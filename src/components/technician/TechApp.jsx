@@ -1,5 +1,6 @@
 // src/components/technician/TechApp.jsx
 import { openExternal, downloadBlob } from "../../utils/openExternal";
+import { PushNotifications } from "@capacitor/push-notifications";
 import { useState, useEffect } from "react";
 import { authHeader, downloadInvoicePdf, getInvoicePdfBlob, sendLocation, apiFetch } from "../../services/api";
 import { useToast } from "../Toast.jsx";
@@ -301,6 +302,58 @@ export default function TechApp({ user, onLogout }) {
   }, []);
 
   // ── SSE — Real-time new job notifications ─────────────────────────────────
+  // ── Push Notification Setup ─────────────────────────────────────────────
+  useEffect(() => {
+    const setupPush = async () => {
+      try {
+        // Request permission
+        const perm = await PushNotifications.requestPermissions();
+        if (perm.receive === "granted") {
+          await PushNotifications.register();
+        }
+        // Handle foreground notifications
+        PushNotifications.addListener("pushNotificationReceived", (notification) => {
+          try {
+            const isEmergency = notification.data?.priority === "EMERGENCY";
+            playJobSound(isEmergency);
+            if (navigator.vibrate) navigator.vibrate(isEmergency ? [300,100,300,100,300] : [200,100,200]);
+            setNewJobAlert({
+              customerName: notification.title || "Naya Job",
+              machineType: notification.body || "",
+              priority: notification.data?.priority || "NORMAL",
+            });
+            loadJobs();
+            setTimeout(() => setNewJobAlert(null), 8000);
+          } catch(e) {}
+        });
+        // Handle notification tap (app band tha)
+        PushNotifications.addListener("pushNotificationActionPerformed", () => {
+          loadJobs();
+        });
+
+        // FCM token register karo aur backend pe save karo
+        PushNotifications.addListener("registration", async (token) => {
+          try {
+            await fetch(`${API}/auth/fcm-token`, {
+              method: "POST",
+              headers: authHeader(),
+              body: JSON.stringify({ fcmToken: token.value }),
+            });
+            console.log("FCM token saved:", token.value.substring(0, 10) + "...");
+          } catch(e) {}
+        });
+
+        PushNotifications.addListener("registrationError", (err) => {
+          console.log("FCM registration error:", err);
+        });
+
+      } catch(e) {
+        console.log("Push notifications not available:", e);
+      }
+    };
+    setupPush();
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("token") || "";
     let es;
@@ -337,7 +390,7 @@ export default function TechApp({ user, onLogout }) {
         o.frequency.value = freq;
         o.type = "sine";
         g.gain.setValueAtTime(0, ctx.currentTime + start);
-        g.gain.linearRampToValueAtTime(0.6, ctx.currentTime + start + 0.02);
+        g.gain.linearRampToValueAtTime(1.0, ctx.currentTime + start + 0.02);
         g.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
         o.start(ctx.currentTime + start);
         o.stop(ctx.currentTime + start + dur + 0.05);

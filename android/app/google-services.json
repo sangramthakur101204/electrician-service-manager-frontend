@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "170501870861",
+    "project_id": "electroserve-3b80a",
+    "storage_bucket": "electroserve-3b80a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:170501870861:android:659ecab44366e386890c44",
+        "android_client_info": {
+          "package_name": "com.matoshree.electroserve"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOzO-dftD0U1DCaJEE9BYqlkARip9uAI0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
