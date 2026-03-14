@@ -384,7 +384,7 @@ export default function LiveTracking({ onNavigate }) {
                     <a href={`tel:${loc.mobile}`} onClick={e=>e.stopPropagation()}
                       style={{padding:"7px",background:"rgba(16,185,129,0.08)",color:"#059669",
                         borderRadius:8,fontSize:12,fontWeight:700,textDecoration:"none",
-                        textAlign:"center",border:"1px solid rgba(16,185,129,0.2)"}}>📞 Call</button>
+                        textAlign:"center",border:"1px solid rgba(16,185,129,0.2)"}}>📞 Call</a>
                     <button onClick={(e)=>{e.stopPropagation();openExternal(`https://maps.google.com?q=${loc.latitude},${loc.longitude}`);}}
                       style={{padding:"7px",background:"rgba(59,130,246,0.08)",color:"#2563eb",
                         borderRadius:8,fontSize:12,fontWeight:700,border:"none",cursor:"pointer",
