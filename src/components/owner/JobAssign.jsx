@@ -81,9 +81,9 @@ export default function JobAssign() {
 
   useEffect(() => { fetchAll(); }, []);
 
-  // Real-time polling every 8s — SSE Render pe reliable nahi hai
+  // Real-time polling — tech status 8s, jobs 15s
   useEffect(() => {
-    const interval = setInterval(async () => {
+    const techInterval = setInterval(async () => {
       try {
         const res = await apiFetch(`${API}/technicians`, { headers: authHeader() });
         if (res.ok) {
@@ -95,7 +95,18 @@ export default function JobAssign() {
         }
       } catch(e) {}
     }, 8000);
-    return () => clearInterval(interval);
+
+    const jobsInterval = setInterval(async () => {
+      try {
+        const res = await apiFetch(`${API}/jobs`, { headers: authHeader() });
+        if (res.ok) {
+          const fresh = await res.json();
+          setJobs(Array.isArray(fresh) ? fresh : []);
+        }
+      } catch(e) {}
+    }, 15000);
+
+    return () => { clearInterval(techInterval); clearInterval(jobsInterval); };
   }, []);
 
   const fetchAll = async () => {

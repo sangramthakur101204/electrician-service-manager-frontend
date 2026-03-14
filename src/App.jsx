@@ -111,15 +111,15 @@ export default function App() {
     </div>
   ) : (
     <>
-      {activeTab === "dashboard"   && <OwnerDashboard customers={customers} expiring={expiring} onNavigate={navigate} />}
-      {activeTab === "jobs"        && <JobAssign />}
-      {activeTab === "customers"   && <CustomerList  customers={customers} onRefresh={fetchAll} />}
-      {activeTab === "tracking"    && <LiveTracking onNavigate={navigate} />}
-      {activeTab === "technicians" && <AddTechnician />}
-      {activeTab === "invoices"    && <AllInvoices />}
-      {activeTab === "analytics"   && <Analytics customers={customers} />}
-      {activeTab === "reminders"   && <Reminders expiring={expiring} customers={customers} onRefresh={fetchAll} />}
-      {activeTab === "settings"    && <Settings onLogout={handleLogout} />}
+      <div style={{display: activeTab==="dashboard" ? "block" : "none"}}><OwnerDashboard customers={customers} expiring={expiring} onNavigate={navigate} /></div>
+      <div style={{display: activeTab==="jobs"        ? "block" : "none"}}><JobAssign /></div>
+      <div style={{display: activeTab==="customers"   ? "block" : "none"}}><CustomerList customers={customers} onRefresh={fetchAll} /></div>
+      <div style={{display: activeTab==="tracking"    ? "block" : "none"}}><LiveTracking onNavigate={navigate} /></div>
+      <div style={{display: activeTab==="technicians" ? "block" : "none"}}><AddTechnician /></div>
+      <div style={{display: activeTab==="invoices"    ? "block" : "none"}}><AllInvoices /></div>
+      <div style={{display: activeTab==="analytics"   ? "block" : "none"}}><Analytics customers={customers} /></div>
+      <div style={{display: activeTab==="reminders"   ? "block" : "none"}}><Reminders expiring={expiring} customers={customers} onRefresh={fetchAll} /></div>
+      <div style={{display: activeTab==="settings"    ? "block" : "none"}}><Settings onLogout={handleLogout} /></div>
     </>
   );
 

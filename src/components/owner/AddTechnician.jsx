@@ -183,9 +183,18 @@ export default function AddTechnician() {
 
   useEffect(() => { fetchAll(); }, []);
 
-  // Periodic re-fetch every 60s — isActive sync karo
+  // Periodic silent refresh every 30s — no loading spinner
   useEffect(() => {
-    const t = setInterval(() => fetchAll(), 60000);
+    const silentSync = async () => {
+      try {
+        const freshTechs = await getTechnicians();
+        setTechs(prev => prev.map(t => {
+          const fresh = freshTechs.find(f => f.id === t.id);
+          return fresh ? { ...t, isActive: fresh.isActive } : t;
+        }));
+      } catch(e) {}
+    };
+    const t = setInterval(silentSync, 30000);
     return () => clearInterval(t);
   }, []);
 
@@ -227,8 +236,8 @@ export default function AddTechnician() {
     return () => clearInterval(t);
   }, [techs]);
 
-  async function fetchAll() {
-    setListLoad(true);
+  async function fetchAll(silent = false) {
+    if (!silent) setListLoad(true);
     try {
       const [techData, invData] = await Promise.all([
         getTechnicians(),
