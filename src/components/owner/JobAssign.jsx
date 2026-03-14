@@ -117,6 +117,20 @@ export default function JobAssign() {
     finally { setListLoading(false); }
   };
 
+  // Silent refresh — no loading spinner, just updates data
+  const silentRefresh = async () => {
+    try {
+      const [j, t, ll] = await Promise.all([
+        apiFetch(`${API}/jobs`, { headers: authHeader() }).then(r => r.json()),
+        getTechnicians(),
+        getLiveLocations().catch(()=>[]),
+      ]);
+      setJobs(Array.isArray(j) ? j : []);
+      setTechnicians(t);
+      setLiveLocs(Array.isArray(ll) ? ll : []);
+    } catch(e) {}
+  };
+
   const filteredCustomers = customers.filter(c => {
     const q = cusSearch.toLowerCase();
     return !q || c.name?.toLowerCase().includes(q) || c.mobile?.includes(q);
@@ -204,7 +218,7 @@ export default function JobAssign() {
       resetForm();
       if (data.whatsappUrl)     setAssignWaUrl(data.whatsappUrl);      // customer pehle
       if (data.techWhatsappUrl) setTechWaUrl(data.techWhatsappUrl);    // tech baad mein
-      fetchAll();
+      silentRefresh();
     } catch (e) { toast(e.message, "error"); }
     finally { setLoading(false); }
   };
@@ -225,7 +239,7 @@ export default function JobAssign() {
       // Backend returns { job, whatsappUrl } when tech assigned
       if (data.whatsappUrl)     setAssignWaUrl(data.whatsappUrl);      // customer pehle
       if (data.techWhatsappUrl) setTechWaUrl(data.techWhatsappUrl);    // tech baad mein
-      fetchAll();
+      silentRefresh();
       toast("✅ Technician assign ho gaya!", "success");
 
       // Google Maps redirect — lat/lng ho toh navigate, warna address text se search
@@ -249,7 +263,7 @@ export default function JobAssign() {
     const ok = await confirm("Job Delete Karo?", "Yeh job permanently delete ho jaayega", { confirmLabel: "Delete", dangerMode: true });
     if (!ok) return;
     await apiFetch(`${API}/jobs/${jobId}`, { method: "DELETE", headers: authHeader() });
-    fetchAll();
+    silentRefresh();
   };
 
   const cancelJob = async (jobId) => {
@@ -261,7 +275,7 @@ export default function JobAssign() {
         body: JSON.stringify({ status: "CANCELLED" }),
       });
       toast("Job cancel ho gaya", "success");
-      fetchAll();
+      silentRefresh();
     } catch(e) { toast("Cancel nahi hua", "error"); }
   };
 
