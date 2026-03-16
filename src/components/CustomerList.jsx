@@ -1,6 +1,6 @@
 // src/components/CustomerList.jsx
 import { openExternal, downloadBlob } from "../utils/openExternal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   markServiceDone, deleteCustomer,
   getWhatsAppLink, getWhatsAppReminderLink, getWhatsAppWarrantyLink,
@@ -25,6 +25,13 @@ const EMPTY_EDIT = {
 
 export default function CustomerList({ customers, onRefresh }) {
   const toast = useToast();
+  const [companySettings, setCompanySettings] = useState(null);
+  useEffect(() => {
+    apiFetch(`${API}/settings`, { headers: authHeader() })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setCompanySettings(d); })
+      .catch(() => {});
+  }, []);
   const [search,        setSearch]       = useState("");
   const [filterStatus,  setFilterStatus] = useState("ALL");
   const [filterMachine, setFilterMachine]= useState("");
@@ -396,7 +403,16 @@ export default function CustomerList({ customers, onRefresh }) {
                         {/* Warranty buttons — sirf tab jab warranty ho */}
                         {c.warrantyPeriod && c.warrantyPeriod !== "No Warranty" && (<>
                           <button className="act-btn act-warranty" onClick={() => handleWA(c.id,"warranty")} title="Warranty Card WhatsApp">🛡️</button>
-                          <button className="act-btn act-pdf"     onClick={() => generateWarrantyCard(c)} title="Warranty PDF Download">📋</button>
+                          <button className="act-btn act-pdf"     onClick={() => generateWarrantyCard({
+                              ...c,
+                              technicianName: c.technicianName || "",
+                              companyName:    companySettings?.companyName    || "",
+                              companyPhone:   companySettings?.companyPhone   || "",
+                              companyPhone2:  companySettings?.companyPhone2  || "",
+                              companyEmail:   companySettings?.companyEmail   || "",
+                              companyAddress: companySettings?.companyAddress || "",
+                              signatureBase64:companySettings?.signatureBase64|| null,
+                            })} title="Warranty PDF Download">📋</button>
                         </>)}
 
                         {/* Invoice — sirf DONE pe */}
@@ -442,7 +458,16 @@ export default function CustomerList({ customers, onRefresh }) {
               <button className="btn-whatsapp" onClick={() => handleWA(detailCustomer.id, "warranty")}>
                 🛡️ Warranty Card WhatsApp pe bhejo
               </button>
-              <button className="btn-primary" onClick={() => generateWarrantyCard(detailCustomer)}>
+              <button className="btn-primary" onClick={() => generateWarrantyCard({
+                ...detailCustomer,
+                technicianName: detailCustomer.technicianName || "",
+                companyName:    companySettings?.companyName    || "",
+                companyPhone:   companySettings?.companyPhone   || "",
+                companyPhone2:  companySettings?.companyPhone2  || "",
+                companyEmail:   companySettings?.companyEmail   || "",
+                companyAddress: companySettings?.companyAddress || "",
+                signatureBase64:companySettings?.signatureBase64|| null,
+              })}>
                 📋 Download Warranty Card
               </button>
             </div>

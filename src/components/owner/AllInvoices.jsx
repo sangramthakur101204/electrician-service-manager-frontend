@@ -138,9 +138,9 @@ export default function AllInvoices() {
           {val:fmt(pendingAmount),label:"⏳ Total Pending", bg:"#fef2f2",border:"#fecaca",color:"#991b1b"},
           {val:invoices.length,   label:"📄 Total Invoices",bg:"#eff6ff",border:"#bfdbfe",color:"#1e40af"},
         ].map((c,i)=>(
-          <div key={i} style={{background:c.bg,border:`1.5px solid ${c.border}`,borderRadius:14,padding:"16px 20px"}}>
-            <div style={{fontSize:24,fontWeight:900,color:c.color}}>{c.val}</div>
-            <div style={{fontSize:12,color:c.color,fontWeight:600,marginTop:4,opacity:0.8}}>{c.label}</div>
+          <div key={i} style={{background:c.bg,border:`1.5px solid ${c.border}`,borderRadius:14,padding:"12px 10px",overflow:"hidden"}}>
+            <div style={{fontSize:18,fontWeight:900,color:c.color,wordBreak:"break-all",lineHeight:1.2}}>{c.val}</div>
+            <div style={{fontSize:10,color:c.color,fontWeight:600,marginTop:4,opacity:0.8,wordBreak:"break-word"}}>{c.label}</div>
           </div>
         ))}
       </div>
