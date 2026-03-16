@@ -314,15 +314,9 @@ export function generateWarrantyCard(customer) {
   const safeName = (customer.name || "customer").replace(/\s+/g, "_");
   withSig(customer, async (c) => {
     const canvas = makeCanvas(c, 794, 1123);
-    try {
-      const dataUrl = canvas.toDataURL("image/png");
-      const { Browser } = await import("@capacitor/browser");
-      await Browser.open({ url: dataUrl });
-    } catch(e) {
-      canvas.toBlob((blob) => {
-        downloadBlob(blob, `WarrantyCard_${safeName}_${certNo}.png`);
-      }, "image/png");
-    }
+    canvas.toBlob(async (blob) => {
+      await downloadBlob(blob, `WarrantyCard_${safeName}_${certNo}.png`);
+    }, "image/png");
   });
 }
 
