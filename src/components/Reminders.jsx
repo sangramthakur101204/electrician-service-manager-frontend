@@ -72,14 +72,6 @@ TEL;TYPE=CELL:+91${mob}
     URL.revokeObjectURL(url);
   };
 
-    const fetchBirthdays = async () => {
-    try {
-      const res = await apiFetch(`${API}/customers/birthdays/today`, { headers: authHeader() });
-      if (res.ok) setBirthdays(await res.json());
-    } catch(e) {}
-    finally { setBdayLoad(false); }
-  };
-
   const fetchAutoReminders = async () => {
     setLoadingAuto(true);
     try {
