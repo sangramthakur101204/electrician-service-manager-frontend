@@ -12,7 +12,17 @@ export default function Reminders({ expiring, customers, onRefresh }) {
   const [autoReminders,setAutoReminders]= useState([]);
   const [loadingAuto,  setLoadingAuto]  = useState(false);
 
-  useEffect(() => { fetchAutoReminders(); }, []);
+  useEffect(() => { fetchAutoReminders(); fetchBirthdays(); }, []);
+  const [birthdays, setBirthdays] = useState([]);
+  const [bdayLoad, setBdayLoad]   = useState(true);
+
+  const fetchBirthdays = async () => {
+    try {
+      const res = await apiFetch(`${API}/customers/birthdays/today`, { headers: authHeader() });
+      if (res.ok) setBirthdays(await res.json());
+    } catch(e) {}
+    finally { setBdayLoad(false); }
+  };
 
   const fetchAutoReminders = async () => {
     setLoadingAuto(true);
@@ -73,8 +83,46 @@ export default function Reminders({ expiring, customers, onRefresh }) {
     { id:"auto",     label:"Auto Reminders",    count: autoReminders.length },
   ];
 
+  const getBirthdayMsg = (customer) => {
+    return `Happy Birthday ${customer.name} ji! 🎂\n\nAapko aur aapke parivar ko janamdin ki hardik badhaai!\n\nHamari taraf se best wishes.\n- {company}`;
+  };
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+
+      {/* 🎂 Birthday Section */}
+      {(bdayLoad || birthdays.length > 0) && (
+        <div style={{ background:"#fff", border:"1.5px solid #fbcfe8", borderRadius:16, overflow:"hidden" }}>
+          <div style={{ padding:"14px 20px", background:"linear-gradient(135deg,#fdf2f8,#fce7f3)", borderBottom:"1px solid #fbcfe8", display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ fontSize:22 }}>🎂</span>
+            <div>
+              <div style={{ fontWeight:800, fontSize:15, color:"#9d174d" }}>Aaj ka Birthday</div>
+              <div style={{ fontSize:12, color:"#be185d" }}>{birthdays.length} customer{birthdays.length !== 1 ? "s" : ""} ka aaj birthday hai!</div>
+            </div>
+          </div>
+          <div style={{ padding:16, display:"flex", flexDirection:"column", gap:10 }}>
+            {bdayLoad ? (
+              <div style={{ textAlign:"center", color:"#94a3b8", padding:20 }}>Loading...</div>
+            ) : birthdays.length === 0 ? (
+              <div style={{ textAlign:"center", color:"#94a3b8", padding:20 }}>Aaj kisi ka birthday nahi</div>
+            ) : birthdays.map(cu => (
+              <div key={cu.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", background:"#fdf2f8", borderRadius:12, border:"1px solid #fbcfe8" }}>
+                <div style={{ width:42, height:42, borderRadius:"50%", background:"linear-gradient(135deg,#ec4899,#be185d)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:16, flexShrink:0 }}>
+                  {cu.name?.[0]?.toUpperCase()}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:700, fontSize:14, color:"#1e293b" }}>{cu.name}</div>
+                  <div style={{ fontSize:12, color:"#64748b" }}>📞 {cu.mobile} {cu.dateOfBirth ? `· 🎂 ${new Date(cu.dateOfBirth).toLocaleDateString("en-IN",{day:"2-digit",month:"long"})}` : ""}</div>
+                </div>
+                <button onClick={() => openExternal(`https://wa.me/91${cu.mobile}?text=${encodeURIComponent(getBirthdayMsg(cu))}`)}
+                  style={{ padding:"8px 14px", background:"#25d366", color:"#fff", border:"none", borderRadius:8, fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>
+                  💬 Wish karo
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14 }}>

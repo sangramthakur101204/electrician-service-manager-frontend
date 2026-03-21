@@ -49,6 +49,37 @@ export default function CustomerList({ customers, onRefresh }) {
   const [exporting,     setExporting]    = useState(false);
   const [historyCustomer, setHistoryCustomer] = useState(null); // NEW
 
+  // ── Export vCard (Contacts) ───────────────────────────────────
+  const exportVCard = async () => {
+    const valid = customers.filter(cu => cu.mobile);
+    if (valid.length === 0) return;
+    let vcf = "";
+    valid.forEach(cu => {
+      const mob = cu.mobile.toString().replace(/\D/g, "").slice(-10);
+      vcf += `BEGIN:VCARD
+VERSION:3.0
+FN:${cu.name || "Customer"}
+N:${cu.name || "Customer"};;;
+TEL;TYPE=CELL:+91${mob}
+`;
+      if (cu.address) vcf += `ADR:;;${cu.address};;;;
+`;
+      if (cu.machineType) vcf += `NOTE:Machine: ${cu.machineType} ${cu.machineBrand || ""}
+`;
+      vcf += `ORG:Customer
+END:VCARD
+
+`;
+    });
+    const blob = new Blob([vcf], { type: "text/vcard;charset=utf-8" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = `Customers_Contacts_${new Date().toLocaleDateString("en-IN").replace(/\//g,"-")}.vcf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // ── Export CSV/Excel ──────────────────────────────────────────
   const exportExcel = async () => {
     setExporting(true);
@@ -282,14 +313,18 @@ export default function CustomerList({ customers, onRefresh }) {
           {machineTypes.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
         <span className="results-count">{filtered.length} customers</span>
-        <div style={{display:"flex",gap:8,marginLeft:"auto"}}>
+        <div style={{display:"flex",gap:6,marginLeft:"auto",flexWrap:"wrap",justifyContent:"flex-end"}}>
+          <button onClick={exportVCard}
+            style={{padding:"7px 12px",borderRadius:10,border:"1.5px solid #3b82f6",background:"rgba(59,130,246,0.06)",color:"#1d4ed8",fontWeight:700,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+            📇 Contacts
+          </button>
           <button onClick={exportExcel} disabled={exporting}
-            style={{padding:"7px 14px",borderRadius:10,border:"1.5px solid #10b981",background:exporting?"#f8fafc":"rgba(16,185,129,0.06)",color:"#059669",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}>
-            📊 {exporting?"Exporting...":"Excel Export"}
+            style={{padding:"7px 12px",borderRadius:10,border:"1.5px solid #10b981",background:exporting?"#f8fafc":"rgba(16,185,129,0.06)",color:"#059669",fontWeight:700,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+            📊 Excel
           </button>
           <button onClick={exportPDF} disabled={exporting}
-            style={{padding:"7px 14px",borderRadius:10,border:"1.5px solid #6366f1",background:exporting?"#f8fafc":"rgba(99,102,241,0.06)",color:"#6366f1",fontWeight:700,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}>
-            📄 {exporting?"Exporting...":"PDF Report"}
+            style={{padding:"7px 12px",borderRadius:10,border:"1.5px solid #6366f1",background:exporting?"#f8fafc":"rgba(99,102,241,0.06)",color:"#6366f1",fontWeight:700,fontSize:11,cursor:"pointer",display:"flex",alignItems:"center",gap:4,whiteSpace:"nowrap"}}>
+            📄 PDF
           </button>
         </div>
       </div>

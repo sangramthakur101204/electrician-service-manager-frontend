@@ -171,7 +171,7 @@ export default function JobAssign() {
   };
 
   const resetForm = () => {
-    setForm({ customerName:"", customerMobile:"", customerAddress:"", latitude:null, longitude:null,
+    setForm({ customerName:"", customerMobile:"", customerAddress:"", customerDob:"", latitude:null, longitude:null,
               problemDescription:"", machineType:"", machineBrand:"",
               priority:"NORMAL", technicianId:"", scheduledDate:"", scheduledTime:"", notes:"" });
     setJobMachines([{ machineType:"", machineBrand:"" }]);
@@ -480,6 +480,11 @@ export default function JobAssign() {
                             </div>
                           )}
                         </div>
+                      </Field>
+                    </div>
+                    <div style={{ gridColumn:"1/-1", marginTop:8 }}>
+                      <Field label="🎂 Birthday (Optional)">
+                        <input type="date" value={form.customerDob||""} onChange={e=>set("customerDob",e.target.value)} style={inp} placeholder="Customer ka birthday"/>
                       </Field>
                     </div>
                   </div>
