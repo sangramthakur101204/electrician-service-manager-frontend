@@ -15,7 +15,6 @@ export default function Reminders({ expiring, customers, onRefresh }) {
 
   const [birthdays, setBirthdays] = useState([]);
   const [bdayLoad, setBdayLoad]   = useState(true);
-  const [allCustomers, setAllCustomers] = useState([]);
 
   const fetchBirthdays = async () => {
     setBdayLoad(true);
@@ -29,48 +28,7 @@ export default function Reminders({ expiring, customers, onRefresh }) {
     finally { setBdayLoad(false); }
   };
 
-  const fetchAllCustomers = async () => {
-    try {
-      const res = await apiFetch(`${API}/customers`, { headers: authHeader() });
-      if (res.ok) {
-        const data = await res.json();
-        setAllCustomers(Array.isArray(data) ? data : []);
-      }
-    } catch(e) {}
-  };
-
-  useEffect(() => { fetchAutoReminders(); fetchBirthdays(); fetchAllCustomers(); }, []);
-
-  const exportContacts = async () => {
-    const source = allCustomers.length > 0 ? allCustomers : (customers || []);
-    if (source.length === 0) return;
-    const valid = source.filter(cu => cu.mobile);
-    let vcf = "";
-    valid.forEach(cu => {
-      const mob = (cu.mobile||"").toString().replace(/[^0-9]/g,"").slice(-10);
-      vcf += `BEGIN:VCARD
-VERSION:3.0
-FN:${cu.name || "Customer"}
-TEL;TYPE=CELL:+91${mob}
-`;
-      if (cu.address) vcf += `ADR:;;${cu.address};;;;
-`;
-      if (cu.machineType) vcf += `NOTE:Machine: ${cu.machineType} ${cu.machineBrand||""}
-`;
-      vcf += `END:VCARD
-
-`;
-    });
-    const blob = new Blob([vcf], { type: "text/vcard;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Customers_Contacts.vcf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+  useEffect(() => { fetchAutoReminders(); fetchBirthdays(); }, []);
 
   const fetchAutoReminders = async () => {
     setLoadingAuto(true);
@@ -137,19 +95,6 @@ TEL;TYPE=CELL:+91${mob}
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-
-      {/* 📇 Contact Export */}
-      <div style={{ background:"#fff", border:"1.5px solid #bfdbfe", borderRadius:14, padding:16, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
-        <div>
-          <div style={{ fontWeight:700, fontSize:14, color:"#1e40af" }}>📇 Contacts Export</div>
-          <div style={{ fontSize:12, color:"#3b82f6", marginTop:2 }}>{customers?.filter(c=>c.mobile)?.length || 0} customers ke contacts save karo</div>
-        </div>
-        <button onClick={exportContacts}
-          style={{ padding:"10px 16px", background:"#1e40af", color:"#fff", border:"none", borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", flexShrink:0 }}>
-          ⬇️ Save Karo
-        </button>
-      </div>
-
       {/* 🎂 Birthday Section */}
       {(bdayLoad || birthdays.length > 0) && (
         <div style={{ background:"#fff", border:"1.5px solid #fbcfe8", borderRadius:16, overflow:"hidden" }}>

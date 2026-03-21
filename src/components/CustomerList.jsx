@@ -51,7 +51,13 @@ export default function CustomerList({ customers, onRefresh }) {
 
   // ── Export vCard (Contacts) ───────────────────────────────────
   const exportVCard = async () => {
-    const valid = customers.filter(cu => cu.mobile && cu.name);
+    // Exclude owner's own record
+    const ownerData = JSON.parse(localStorage.getItem("user") || "{}");
+    const ownerMobile = ownerData?.mobile || "";
+    const valid = customers.filter(cu =>
+      cu.mobile && cu.name &&
+      cu.mobile.toString().slice(-10) !== ownerMobile.toString().slice(-10)
+    );
     if (valid.length === 0) return;
     let vcf = "";
     valid.forEach(cu => {

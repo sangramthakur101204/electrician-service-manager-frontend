@@ -25,7 +25,16 @@ export default function InvoiceModal({ customer, onClose }) {
 
   useEffect(() => {
     getRateCards()
-      .then(setRateCards)
+      .then(cards => {
+        setRateCards(cards);
+        // Auto filter by machine type if customer has one
+        if (customer.machineType) {
+          const match = cards.find(r =>
+            r.category?.toLowerCase() === customer.machineType?.toLowerCase()
+          );
+          if (match) setFilterCat(match.category);
+        }
+      })
       .catch(() => {})
       .finally(() => setRcLoading(false));
   }, []);
