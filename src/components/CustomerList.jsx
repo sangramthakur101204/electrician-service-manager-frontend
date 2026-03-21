@@ -51,23 +51,22 @@ export default function CustomerList({ customers, onRefresh }) {
 
   // ── Export vCard (Contacts) ───────────────────────────────────
   const exportVCard = async () => {
-    const valid = customers.filter(cu => cu.mobile);
+    const valid = customers.filter(cu => cu.mobile && cu.name);
     if (valid.length === 0) return;
     let vcf = "";
     valid.forEach(cu => {
-      const mob = cu.mobile.toString().replace(/\D/g, "").slice(-10);
+      const mob = (cu.mobile || "").toString().replace(/[^0-9]/g, "").slice(-10);
+      if (mob.length < 10) return; // skip invalid numbers
+      const name = (cu.name || "Customer").trim();
       vcf += `BEGIN:VCARD
 VERSION:3.0
-FN:${cu.name || "Customer"}
-N:${cu.name || "Customer"};;;
+FN:${name}
+N:${name};;;
 TEL;TYPE=CELL:+91${mob}
 `;
-      if (cu.address) vcf += `ADR:;;${cu.address};;;;
+      if (cu.machineType) vcf += `NOTE:${cu.machineType} ${cu.machineBrand || ""}
 `;
-      if (cu.machineType) vcf += `NOTE:Machine: ${cu.machineType} ${cu.machineBrand || ""}
-`;
-      vcf += `ORG:Customer
-END:VCARD
+      vcf += `END:VCARD
 
 `;
     });
@@ -75,8 +74,10 @@ END:VCARD
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
     a.href = url;
-    a.download = `Customers_Contacts_${new Date().toLocaleDateString("en-IN").replace(/\//g,"-")}.vcf`;
+    a.download = `Customers_${new Date().toLocaleDateString("en-IN").replace(/\//g,"-")}.vcf`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
