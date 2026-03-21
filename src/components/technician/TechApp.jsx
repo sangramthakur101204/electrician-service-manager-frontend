@@ -33,12 +33,7 @@ const STATUS_FLOW = {
 
 const WARRANTY_OPTS = ["No Warranty","3 months","6 months","1 year","2 years","3 years"];
 
-const QUICK_SERVICES = [
-  {name:"Gas Charging",price:800},{name:"PCB Repair",price:1500},
-  {name:"Compressor Repair",price:3000},{name:"Capacitor Replace",price:350},
-  {name:"Motor Repair",price:1200},{name:"Filter Clean",price:300},
-  {name:"General Service",price:500},{name:"Installation",price:600},
-];
+// QUICK_SERVICES removed — now fetched from API
 
 const fmt = n => "₹" + Number(n||0).toLocaleString("en-IN");
 
@@ -79,7 +74,8 @@ export default function TechApp({ user, onLogout }) {
   const [invoice,   setInvoice]   = useState(null);
 
   const [companySettings, setCompanySettings] = useState(null);
-  const [newJobAlert, setNewJobAlert] = useState(null); // {jobId, customerName, machineType, priority}
+  const [newJobAlert, setNewJobAlert] = useState(null);
+  const [rateCards, setRateCards] = useState([]); // {jobId, customerName, machineType, priority}
 
   const [gpsStatus, setGpsStatus] = useState("starting"); // "starting" | "ok" | "error"
   const [isActive,  setIsActive]  = useState(() => {
@@ -298,6 +294,12 @@ export default function TechApp({ user, onLogout }) {
     apiFetch(`${API}/settings`, { headers: authHeader() })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d) setCompanySettings(d); })
+      .catch(() => {});
+
+    // Fetch rate cards from API
+    apiFetch(`${API}/rate-cards/active`, { headers: authHeader() })
+      .then(r => r.ok ? r.json() : [])
+      .then(d => { if (Array.isArray(d)) setRateCards(d); })
       .catch(() => {});
   }, []);
 
@@ -982,12 +984,19 @@ export default function TechApp({ user, onLogout }) {
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:8}}>⚡ Quick Add</div>
                 <div className="tech-inv-quick-wrap">
-                  {QUICK_SERVICES.map(s=>(
-                    <button key={s.name} className="tech-inv-quick-btn"
-                      onClick={()=>setItems(prev=>[...prev.filter(x=>x.name),{name:s.name,qty:1,price:s.price}])}>
-                      {s.name} · {fmt(s.price)}
-                    </button>
-                  ))}
+                  {(() => {
+                    const machine = selected?.machineType || selected?.customer?.machineType || "";
+                    const filtered = machine
+                      ? rateCards.filter(r => r.category?.toLowerCase() === machine.toLowerCase())
+                      : rateCards;
+                    const display = filtered.length > 0 ? filtered : rateCards;
+                    return display.length > 0 ? display.map(s => (
+                      <button key={s.id || s.serviceName} className="tech-inv-quick-btn"
+                        onClick={() => setItems(prev => [...prev.filter(x => x.name), {name: s.serviceName, qty: 1, price: s.price}])}>
+                        {s.serviceName} · {fmt(s.price)}
+                      </button>
+                    )) : <div style={{fontSize:12,color:"#94a3b8",padding:"8px 0"}}>Rate cards load ho rahe hain...</div>;
+                  })()}
                 </div>
               </div>
 
