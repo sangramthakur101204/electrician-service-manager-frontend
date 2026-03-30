@@ -457,10 +457,7 @@ TEL;TYPE=CELL:+91${mob}
                             })} title="Warranty PDF Download">📋</button>
                         </>)}
 
-                        {/* Invoice — sirf DONE pe */}
-                        {c.serviceStatus === "DONE" && (
-                          <button className="act-btn act-invoice" onClick={() => openCustInvoices(c)} title="Customer Invoices Dekho">📄</button>
-                        )}
+
                       </>)}
 
                       {/* Delete — hamesha */}

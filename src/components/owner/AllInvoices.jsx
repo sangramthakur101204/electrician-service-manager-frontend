@@ -256,11 +256,8 @@ export default function AllInvoices() {
                     <button onClick={()=>markPaid(inv.id,"Cash")} style={actionBtn("#059669","rgba(16,185,129,0.08)")}>💵 Cash Mila</button>
                     <button onClick={()=>markPaid(inv.id,"UPI")}  style={actionBtn("#3b82f6","rgba(59,130,246,0.08)")}>📱 UPI Mila</button>
                   </>}
-                  <button onClick={()=>downloadInvoicePdf(inv.id,inv.customer?.name,inv.invoiceNumber)} style={actionBtn("#6366f1","rgba(99,102,241,0.08)")}>📄 PDF</button>
-                  {inv.customer?.mobile && (
-                    <button onClick={()=>openExternal(`https://wa.me/91${inv.customer.mobile}?text=${encodeURIComponent(`Namaste ${inv.customer?.name||""} ji! Aapka invoice ${inv.invoiceNumber} — Total: ${fmt(inv.totalAmount)}.`)}`)}
-                      style={{...actionBtn("#25d366","rgba(37,211,102,0.08)")}}>💬 WA</button>
-                  )}
+
+
                   <button onClick={()=>setEditInv({...inv})} style={actionBtn("#f59e0b","rgba(245,158,11,0.08)")}>✏️ Edit</button>
                   <button onClick={()=>deleteInvoice(inv.id)} style={{...actionBtn("#ef4444","rgba(239,68,68,0.08)"),marginLeft:"auto"}}>🗑️</button>
                 </div>
